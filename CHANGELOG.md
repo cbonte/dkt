@@ -29,3 +29,7 @@
 - cat: render one section chosen by its heading text or its anchor.
 - toc: insert or refresh a table of contents between two HTML comment markers.
 - toc: report the files whose table of contents is stale.
+- lint: report a site annotation that does not hold, with the rule site-annotation.
+- lint: report relative links and images that point to a missing file.
+- lint: report anchors that match no heading in the file or in the linked one.
+- lint: report skipped heading levels and duplicate headings.

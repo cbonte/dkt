@@ -1,5 +1,6 @@
 //! Markdown parsing and terminal rendering, with the commands built on them.
 
+pub mod annotation;
 pub mod ansi;
 pub mod cli_extras;
 pub mod cmd;
@@ -12,10 +13,12 @@ pub mod options;
 pub mod pager;
 pub mod parse;
 pub mod slug;
+pub mod source;
 pub mod style;
 pub mod table;
 pub mod term;
 pub mod toc;
+pub mod tree;
 pub mod wrap;
 
 use std::io::Write;
