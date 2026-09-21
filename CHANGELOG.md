@@ -27,3 +27,5 @@
 - dkt: print the manual as one roff page per command.
 - cat: list the outline of a document with the anchor of each heading.
 - cat: render one section chosen by its heading text or its anchor.
+- toc: insert or refresh a table of contents between two HTML comment markers.
+- toc: report the files whose table of contents is stale.
