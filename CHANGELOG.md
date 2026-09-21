@@ -33,3 +33,6 @@
 - lint: report relative links and images that point to a missing file.
 - lint: report anchors that match no heading in the file or in the linked one.
 - lint: report skipped heading levels and duplicate headings.
+- fmt: rewrap paragraphs to a target width without touching inline markup.
+- fmt: normalise list markers and heading syntax and realign tables.
+- fmt: report the files that would change or print a diff of the changes.

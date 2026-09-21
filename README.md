@@ -5,6 +5,7 @@ Doc Kit (dk:t): document tools in one binary, sharing one parser and one model.
 | Command                               | Purpose                                                  |
 | ------------------------------------- | -------------------------------------------------------- |
 | [dkt cat](docs/cat.md)                | render a document as styled text                         |
+| [dkt fmt](docs/fmt.md)                | rewrap prose and normalise block syntax                  |
 | [dkt toc](docs/toc.md)                | insert or refresh a table of contents                    |
 | [dkt lint](docs/lint.md)              | check links, anchors and heading structure               |
 
