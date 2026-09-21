@@ -1,0 +1,195 @@
+//! Markdown parsing and terminal rendering, with the commands built on them.
+
+pub mod ansi;
+pub mod cli_extras;
+pub mod cmd;
+pub mod highlight;
+pub mod html;
+pub mod layout;
+pub mod mermaid;
+pub mod model;
+pub mod options;
+pub mod pager;
+pub mod parse;
+pub mod slug;
+pub mod style;
+pub mod table;
+pub mod term;
+pub mod wrap;
+
+use std::io::Write;
+
+use anyhow::Result;
+
+pub use options::RenderOptions;
+
+use ansi::AnsiWriter;
+use highlight::Highlighter;
+use layout::Renderer;
+use model::{Block, Document, Segment};
+use options::LinkMode;
+use style::ColorLevel;
+
+fn has_code(blocks: &[Block]) -> bool {
+    blocks.iter().any(|b| match b {
+        Block::CodeBlock { .. } => true,
+        Block::BlockQuote { blocks, .. } => has_code(blocks),
+        Block::List { items, .. } => items.iter().any(|i| has_code(&i.blocks)),
+        Block::FrontMatter { .. } => true,
+        _ => false,
+    })
+}
+
+/// Parses `md` and expands its HTML blocks.
+pub fn document(md: &str, opts: &RenderOptions) -> Document {
+    let parsed = parse::parse(md, &opts.theme, opts.links);
+    Document {
+        blocks: html::expand(parsed.blocks, &opts.theme, opts.links),
+        footnotes: parsed
+            .footnotes
+            .into_iter()
+            .map(|blocks| html::expand(blocks, &opts.theme, opts.links))
+            .collect(),
+    }
+}
+
+/// Appends the footnote bodies as a numbered list under a rule.
+fn footnote_blocks(footnotes: Vec<Vec<Block>>) -> Option<[Block; 2]> {
+    if footnotes.is_empty() {
+        return None;
+    }
+    let items = footnotes
+        .into_iter()
+        .map(|blocks| model::ListItem { task: None, blocks })
+        .collect();
+    Some([
+        Block::Rule,
+        Block::List {
+            start: Some(1),
+            tight: false,
+            items,
+        },
+    ])
+}
+
+/// Renders `md` to `out` according to `opts`.
+pub fn render(md: &str, opts: &RenderOptions, out: &mut dyn Write) -> Result<()> {
+    render_document(document(md, opts), opts, out)
+}
+
+/// Renders an already parsed document, as produced by `document`.
+pub fn render_document(doc: Document, opts: &RenderOptions, out: &mut dyn Write) -> Result<()> {
+    let mut blocks = doc.blocks;
+    if let Some(tail) = footnote_blocks(doc.footnotes) {
+        blocks.extend(tail);
+    }
+    let highlighter = if opts.color != ColorLevel::None && has_code(&blocks) {
+        Some(Highlighter::new(&opts.code_theme, opts.theme.code_block)?)
+    } else {
+        None
+    };
+    let writer = AnsiWriter::new(out, opts.color, opts.links == LinkMode::Osc8);
+    let mut renderer = Renderer::new(writer, opts, highlighter.as_ref());
+    renderer.render_blocks(&blocks, false)?;
+    renderer.finish()?;
+    Ok(())
+}
+
+/// Writes a file name and a rule, used to separate documents when several are rendered.
+pub fn render_file_header(name: &str, opts: &RenderOptions, out: &mut dyn Write) -> Result<()> {
+    let mut writer = AnsiWriter::new(out, opts.color, false);
+    writer.write_segment(&Segment::new(name, opts.theme.file_header))?;
+    writer.end_line()?;
+    let rule = opts.glyphs.rule.to_string().repeat(opts.width);
+    writer.write_segment(&Segment::new(rule, opts.theme.rule))?;
+    writer.end_line()?;
+    writer.flush()?;
+    Ok(())
+}
+
+/// Writes the document outline, one heading per line, indented by level.
+pub fn render_outline(
+    doc: &Document,
+    depth: u8,
+    opts: &RenderOptions,
+    out: &mut dyn Write,
+) -> Result<()> {
+    let entries: Vec<slug::Entry> = slug::outline(doc)
+        .into_iter()
+        .filter(|e| e.level <= depth)
+        .collect();
+    let top = entries.iter().map(|e| e.level).min().unwrap_or(1);
+    let mut writer = AnsiWriter::new(out, opts.color, false);
+    for entry in &entries {
+        let indent = usize::from(entry.level - top) * options::defaults::TOC_INDENT;
+        writer.write_segment(&Segment::new(" ".repeat(indent), opts.theme.base))?;
+        writer.write_segment(&Segment::new(
+            opts.glyphs.bullet.clone(),
+            opts.theme.list_marker,
+        ))?;
+        writer.write_segment(&Segment::new(entry.text.clone(), opts.theme.base))?;
+        writer.end_line()?;
+    }
+    writer.flush()?;
+    Ok(())
+}
+
+/// Keeps only the section opened by the heading named `name`.
+/// Returns `None` when no heading matches.
+pub fn section(doc: &Document, name: &str) -> Option<Document> {
+    let entries = slug::outline(doc);
+    let entry = slug::find_section(&entries, name)?;
+    let range = slug::section_range(doc, entry);
+    Some(Document {
+        blocks: doc.blocks[range].to_vec(),
+        footnotes: doc.footnotes.clone(),
+    })
+}
+
+/// Convenience for tests: renders to a `String`.
+pub fn render_to_string(md: &str, opts: &RenderOptions) -> Result<String> {
+    let mut buf = Vec::new();
+    render(md, opts, &mut buf)?;
+    Ok(String::from_utf8(buf)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use options::FrontMatter;
+
+    #[test]
+    fn wide_left_to_right_flowchart_is_stacked() {
+        let md = "```mermaid\nflowchart LR\n  A[\"first long label\"] --> B[\"second long label\"]\n```\n";
+        let drawn = render_to_string(md, &RenderOptions::plain(30)).unwrap();
+        assert!(drawn.contains("| first long label |"), "{drawn}");
+        assert!(drawn.contains("| second long label |"), "{drawn}");
+    }
+
+    #[test]
+    fn mermaid_drawn_unless_disabled() {
+        let md = "```mermaid\ngraph LR\n  A --> B\n```\n";
+        let mut opts = RenderOptions::plain(40);
+        let drawn = render_to_string(md, &opts).unwrap();
+        assert!(drawn.contains("| A +"), "{drawn}");
+        opts.diagrams = false;
+        assert_eq!(
+            render_to_string(md, &opts).unwrap(),
+            "  graph LR\n    A --> B\n"
+        );
+    }
+
+    #[test]
+    fn front_matter_shown_on_request() {
+        let mut opts = RenderOptions::plain(40);
+        assert_eq!(
+            render_to_string("---\ntitle: x\n---\n\nbody\n", &opts).unwrap(),
+            "body\n"
+        );
+        opts.front_matter = FrontMatter::Show;
+        assert_eq!(
+            render_to_string("---\ntitle: x\n---\n\nbody\n", &opts).unwrap(),
+            "  title: x\n\nbody\n"
+        );
+    }
+}

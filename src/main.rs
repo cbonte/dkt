@@ -1,0 +1,60 @@
+use std::process::ExitCode;
+
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
+
+use dkt::cli_extras::{self, is_broken_pipe};
+use dkt::cmd::cat;
+
+/// Document tools for the terminal.
+#[derive(Parser, Debug)]
+#[command(name = "dkt", version, about, arg_required_else_help = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+
+    /// Print a completion script for the given shell and exit.
+    #[arg(long, value_enum, value_name = "SHELL", hide_short_help = true)]
+    completions: Option<Shell>,
+
+    /// Print the manual, one roff page per command, and exit.
+    #[arg(long, hide_short_help = true)]
+    man: bool,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Render a document as styled text in the terminal.
+    Cat(cat::Args),
+}
+
+fn dispatch(command: Command) -> (&'static str, anyhow::Result<ExitCode>) {
+    match command {
+        Command::Cat(args) => ("cat", cat::run(&args)),
+    }
+}
+
+fn main() -> ExitCode {
+    let cli = Cli::parse();
+    match cli_extras::handle(&mut Cli::command(), cli.completions, cli.man) {
+        Ok(true) => return ExitCode::SUCCESS,
+        Ok(false) => {}
+        Err(e) => {
+            eprintln!("dkt: {e}");
+            return ExitCode::FAILURE;
+        }
+    }
+    let Some(command) = cli.command else {
+        return ExitCode::SUCCESS;
+    };
+    let (name, result) = dispatch(command);
+    match result {
+        Ok(code) => code,
+        // A reader that closed the pipe, as head does, is not a failure.
+        Err(e) if is_broken_pipe(&e) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("dkt {name}: {e:#}");
+            ExitCode::FAILURE
+        }
+    }
+}

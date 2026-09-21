@@ -1,0 +1,29 @@
+# Unreleased
+
+## Added
+
+- cat: show a link to the same document as its text.
+- cat: draw Mermaid flowcharts as text.
+- cat: draw Mermaid rounded and diamond nodes and multi-line labels.
+- cat: draw Mermaid edge labels and dotted and thick edges.
+- cat: draw Mermaid sequence diagrams as text.
+- cat: show Mermaid blocks as code on request.
+- cat: draw Mermaid pie charts as bars.
+- cat: draw Mermaid state diagrams as text.
+- cat: draw Mermaid class diagrams as text.
+- cat: draw Mermaid entity-relationship diagrams as text.
+- cat: stack a Mermaid flowchart top-down when left-to-right is too wide.
+- cat: draw a rule between table rows, or a blank line with --table-rules never.
+- cat: render a Markdown file as styled text on the terminal.
+- cat: render several files in order with a file name header on each.
+- cat: join the lines of a paragraph by default and keep them on request.
+- cat: highlight the syntax of code blocks.
+- cat: fit table columns to the line width.
+- cat: render GitHub alerts such as NOTE and WARNING.
+- cat: render footnotes as a numbered list at the end of the document.
+- cat: hide the YAML or TOML front matter unless asked to show it.
+- cat: send the output to a pager on request.
+- dkt: print a completion script for a given shell.
+- dkt: print the manual as one roff page per command.
+- cat: list the outline of a document with the anchor of each heading.
+- cat: render one section chosen by its heading text or its anchor.
