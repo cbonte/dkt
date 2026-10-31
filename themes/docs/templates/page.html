@@ -10,6 +10,7 @@
 <main class="prose">
 {% if sec %}<div class="crumbs">{{ sec.title }} <span aria-hidden="true">/</span> {{ page.nav_title }}</div>{% endif %}
 {{ page.content }}
+{% include "partials/pager.html" %}
 </main>
 {% if toc %}
 <aside class="toc"><b>On this page</b>{% for h in toc %}<a href="#{{ h.id }}" class="l{{ h.level }}" title="{{ h.text }}">{{ h.text }}</a>{% endfor %}</aside>

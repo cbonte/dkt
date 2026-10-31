@@ -855,6 +855,63 @@
     window.addEventListener("scroll", hide, { passive: true });
   };
 
+  // What the reader has done in the pages of the site, from what the browser remembers of each widget.
+  // widgets.json says what each page holds, and the state of a widget is read the way it was saved.
+  function course(root, id) {
+    if (!dkt.script) return false;
+    var base = dkt.script.replace(/widgets\.js(\?.*)?$/, "");
+    var done = function (kind, state) {
+      if (kind === "quiz") return typeof state === "number" ? 1 : 0;
+      if (!Array.isArray(state)) return 0;
+      if (kind === "flashcards") return state.length;
+      return state.filter(Boolean).length;
+    };
+    fetch(base + "widgets.json")
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (pages) {
+        var list = make("div", "dkt-course");
+        var sum = 0;
+        var total = 0;
+        var rows = pages.map(function (page) {
+          var seen = 0;
+          var all = 0;
+          page.w.forEach(function (widget) {
+            var state = null;
+            try {
+              state = JSON.parse(localStorage.getItem("dkt:" + page.u + ":" + widget.i));
+            } catch (e) {}
+            seen += Math.min(widget.n, done(widget.k, state));
+            all += widget.n;
+          });
+          sum += seen;
+          total += all;
+          var row = make("div", "dkt-row" + (seen === all ? " dkt-done" : ""));
+          var link = make("a", "", page.t);
+          link.href = page.u;
+          var bar = make("progress");
+          bar.max = all;
+          bar.value = seen;
+          row.appendChild(link);
+          row.appendChild(bar);
+          row.appendChild(make("small", "", seen + "/" + all));
+          return row;
+        });
+        var overall = dkt.progress();
+        overall.set(sum, total);
+        root.textContent = "";
+        list.appendChild(overall.node);
+        rows.forEach(function (row) {
+          list.appendChild(row);
+        });
+        root.appendChild(list);
+        root.classList.add("dkt-ready");
+      })
+      .catch(function () {});
+    return false;
+  }
+
   builders.table = table;
   builders.compare = compare;
   builders.diff = diff;
@@ -864,4 +921,5 @@
   builders.builder = builder;
   builders.replay = replay;
   builders.since = since;
+  builders.progress = course;
 })();

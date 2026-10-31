@@ -155,3 +155,14 @@ html pre.dkt-screen code { background: none; padding: 0; color: inherit; font: i
 .dkt-preview strong { display: block; }
 .dkt-preview .dkt-where { display: block; color: var(--muted, #5b6370); font-size: 12px; }
 .dkt-preview p { margin: 6px 0 0; color: var(--soft, inherit); }
+
+/* Progress: what the reader has done in the pages of the site */
+.dkt-course { display: grid; gap: 8px; }
+.dkt-course .dkt-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px 4.5em; align-items: center; gap: 12px; }
+.dkt-course .dkt-row progress, .dkt-course > .dkt-progress progress { width: 100%; height: 6px; appearance: none; border: 0; border-radius: 3px; background: var(--line, #e3e6eb); accent-color: var(--accent, #c2410c); }
+.dkt-course progress::-webkit-progress-bar { background: var(--line, #e3e6eb); border-radius: 3px; }
+.dkt-course progress::-webkit-progress-value { background: var(--accent, #c2410c); border-radius: 3px; }
+.dkt-course progress::-moz-progress-bar { background: var(--accent, #c2410c); border-radius: 3px; }
+.dkt-course .dkt-row small { color: var(--muted, #5b6370); text-align: right; }
+.dkt-course .dkt-row.dkt-done a::after { content: " \2713"; color: #15803d; }
+@media (max-width: 560px) { .dkt-course .dkt-row { grid-template-columns: 1fr 90px 4em; } }

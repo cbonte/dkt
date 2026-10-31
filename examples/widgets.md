@@ -12,22 +12,23 @@ the blocks of the widget
 The blocks go through the same rendering as the rest of the page, so headings keep their anchors and
 links keep their targets. Without JavaScript the blocks stay in place and the page reads the same.
 
-| Widget       | Blocks it holds                                          | Keys                                     |
-| ------------ | -------------------------------------------------------- | ---------------------------------------- |
-| `tabs`       | a heading for each tab, and what follows                 | `id`                                     |
-| `checklist`  | a list of tasks                                          | `id`                                     |
-| `steps`      | an ordered list                                          | `id`                                     |
-| `quiz`       | a question, a list of choices, an answer                 | `id`, `answer`                           |
-| `carousel`   | slides, separated by thematic breaks                     | `id`, `show`, `autoplay`, `loop`, `zoom` |
-| `table`      | a table                                                  | `id`                                     |
-| `compare`    | 2 pictures                                               | `id`                                     |
-| `diff`       | a code block of the language `diff`                      | `id`                                     |
-| `chart`      | a table of numbers                                       | `id`, `type`                             |
-| `flashcards` | a table of 2 columns, front and back                     | `id`                                     |
-| `annotated`  | a picture, and a list with one item for each pin         | `id`, `pins`                             |
-| `builder`    | a table of fields, and a code block that holds the model | `id`                                     |
-| `replay`     | a code block, the lines that start with `$ ` being typed | `id`, `speed`                            |
-| `since`      | headings that start with a version, and their text       | `id`                                     |
+| Widget       | Blocks it holds                                                  | Keys                                     |
+| ------------ | ---------------------------------------------------------------- | ---------------------------------------- |
+| `tabs`       | a heading for each tab, and what follows                         | `id`                                     |
+| `checklist`  | a list of tasks                                                  | `id`                                     |
+| `steps`      | an ordered list                                                  | `id`                                     |
+| `quiz`       | a question, a list of choices, an answer                         | `id`, `answer`                           |
+| `carousel`   | slides, separated by thematic breaks                             | `id`, `show`, `autoplay`, `loop`, `zoom` |
+| `table`      | a table                                                          | `id`                                     |
+| `compare`    | 2 pictures                                                       | `id`                                     |
+| `diff`       | a code block of the language `diff`                              | `id`                                     |
+| `chart`      | a table of numbers                                               | `id`, `type`                             |
+| `flashcards` | a table of 2 columns, front and back                             | `id`                                     |
+| `annotated`  | a picture, and a list with one item for each pin                 | `id`, `pins`                             |
+| `builder`    | a table of fields, and a code block that holds the model         | `id`                                     |
+| `replay`     | a code block, the lines that start with `$ ` being typed         | `id`, `speed`                            |
+| `since`      | headings that start with a version, and their text               | `id`                                     |
+| `progress`   | nothing, a line of text for those who read it without the script | `id`                                     |
 
 `id` names the widget for what the reader did, such as the box ticked or the tab chosen. It is
 letters, digits, hyphens and underscores. A widget with no `id` is named by its place on the page,
@@ -401,6 +402,22 @@ run. Only the versions that come after it stay, and the choice is remembered.
 - The first release.
 
 <!-- site: end -->
+
+## Progress
+
+What the reader has done in the whole site: the boxes ticked, the steps done, the quizzes answered
+and the cards known, page by page, with a bar for all of them. The build writes `widgets.json`,
+which says what each page holds, and the widget reads what the browser remembers of each one.
+Nothing leaves the browser.
+
+<!-- site: widget progress id=course -->
+
+The progress of the reader appears here.
+
+<!-- site: end -->
+
+A section with `pager = true` also ends each of its pages with links to the previous and to the next
+page, as the pages of this section do.
 
 ## Copy button
 

@@ -127,6 +127,9 @@ pub struct Section {
     /// Whether the pages of the section list their siblings in a side menu.
     #[serde(default)]
     pub sidebar: bool,
+    /// Whether a page of the section ends with links to the previous and to the next page.
+    #[serde(default)]
+    pub pager: bool,
 }
 
 fn default_section_template() -> String {

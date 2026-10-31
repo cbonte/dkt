@@ -79,3 +79,10 @@ html pre.ansi code { color: inherit; background: none; }
 .a-bg14 { background: var(--a14); }
 .a-fg15 { color: var(--a15); }
 .a-bg15 { background: var(--a15); }
+
+/* The links to the previous and to the next page of a section */
+.pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 2.5em; padding-top: 1em; border-top: 1px solid var(--line, #e3e6eb); }
+.pager a { display: grid; gap: 2px; max-width: 48%; padding: 8px 14px; color: var(--fg, inherit); border: 1px solid var(--line, #e3e6eb); border-radius: 10px; text-decoration: none; }
+.pager a:hover { border-color: var(--accent, #c2410c); text-decoration: none; }
+.pager small { color: var(--muted, #5b6370); font-size: 12px; }
+.pager .next { margin-left: auto; text-align: right; }

@@ -32,12 +32,14 @@ name = "commands"
 title = "Commands"
 description = "One guide per command."
 sidebar = true
+pager = true
 
 [[section]]
 name = "examples"
 title = "Examples"
 description = "What a page looks like, in several formats, themes and components."
 sidebar = true
+pager = true
 
 [[page]]
 glob = "docs/*.md"

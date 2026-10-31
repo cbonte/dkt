@@ -36,6 +36,70 @@ pub struct Page {
     pub no_search: bool,
     /// The words that `alias` annotations give to sections, in order.
     pub aliases: Vec<Alias>,
+    /// What a reader can finish in the widgets of the page: boxes, steps, quizzes and cards.
+    pub widgets: Vec<WidgetInfo>,
+}
+
+/// A widget that a reader can go through, with how many things there are to do in it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WidgetInfo {
+    pub id: String,
+    pub kind: String,
+    pub total: usize,
+}
+
+/// The widgets of a page that a reader goes through, in order, with what each one holds.
+fn inventory(events: &[Event<'_>]) -> Vec<WidgetInfo> {
+    let mut found: Vec<WidgetInfo> = Vec::new();
+    let mut position = 0;
+    let mut depth = 0usize;
+    let mut open = false;
+    for event in events {
+        match event {
+            Event::Html(html) => {
+                if let Some(Ok(note)) = annotation::from_html(html) {
+                    match note.kind {
+                        Kind::Widget => {
+                            position += 1;
+                            let kind = note.get("widget").unwrap_or_default().to_string();
+                            found.push(WidgetInfo {
+                                id: note
+                                    .get("id")
+                                    .map_or_else(|| format!("w{position}"), str::to_string),
+                                total: usize::from(kind == "quiz"),
+                                kind,
+                            });
+                            open = true;
+                        }
+                        Kind::End => open = false,
+                        _ => {}
+                    }
+                }
+            }
+            Event::Start(Tag::List(_)) => depth += 1,
+            Event::End(TagEnd::List(_)) => depth = depth.saturating_sub(1),
+            Event::Start(Tag::Item) if open && depth == 1 => {
+                if let Some(widget) = found.last_mut().filter(|w| w.kind == "steps") {
+                    widget.total += 1;
+                }
+            }
+            Event::TaskListMarker(_) if open => {
+                if let Some(widget) = found.last_mut().filter(|w| w.kind == "checklist") {
+                    widget.total += 1;
+                }
+            }
+            Event::Start(Tag::TableRow) if open => {
+                if let Some(widget) = found.last_mut().filter(|w| w.kind == "flashcards") {
+                    widget.total += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    found.retain(|w| {
+        w.total > 0 && ["checklist", "steps", "quiz", "flashcards"].contains(&w.kind.as_str())
+    });
+    found
 }
 
 /// Words that find a section in a search, from an `alias` annotation.
@@ -185,7 +249,10 @@ pub fn render(md: &str, rewrite: Option<Rewrite<'_>>) -> Page {
 pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
     let rewrite = hooks.rewrite;
     let events: Vec<Event<'_>> = Parser::new_ext(md, parser_options()).collect();
-    let mut page = Page::default();
+    let mut page = Page {
+        widgets: inventory(&events),
+        ..Page::default()
+    };
     let mut body: Vec<Event<'_>> = Vec::with_capacity(events.len());
     let mut seen = HashMap::new();
     let mut page_notes = Vec::new();

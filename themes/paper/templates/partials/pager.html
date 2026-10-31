@@ -1,0 +1,7 @@
+{# Links to the previous and to the next page of a section that asks for them. #}
+{% set group = site.sections[page.section] if page.section else none %}
+{% if group and group.pager %}
+{% set at = namespace(prev=none, next=none) %}
+{% for p in group.pages %}{% if p.url == page.url %}{% if not loop.first %}{% set at.prev = group.pages[loop.index0 - 1] %}{% endif %}{% if not loop.last %}{% set at.next = group.pages[loop.index0 + 1] %}{% endif %}{% endif %}{% endfor %}
+{% if at.prev or at.next %}<nav class="pager" aria-label="Pages of {{ group.title }}">{% if at.prev %}<a class="prev" href="{{ at.prev.url }}" rel="prev"><small>Previous</small>{{ at.prev.nav_title }}</a>{% else %}<span></span>{% endif %}{% if at.next %}<a class="next" href="{{ at.next.url }}" rel="next"><small>Next</small>{{ at.next.nav_title }}</a>{% endif %}</nav>{% endif %}
+{% endif %}

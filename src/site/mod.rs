@@ -244,11 +244,50 @@ struct Entry {
     order: i64,
 }
 
+/// The file that tells a page of progress what each page holds that a reader can finish. It is
+/// not written for a site that has nothing of the kind.
+fn write_widgets(out: &Path, links: &[PageLink], pages: &[Searchable]) -> Result<()> {
+    let mut json = String::from("[");
+    let mut first = true;
+    for (link, page) in links.iter().zip(pages) {
+        if page.widgets.is_empty() {
+            continue;
+        }
+        if !first {
+            json.push(',');
+        }
+        first = false;
+        json.push_str("{\"u\":");
+        crate::search::quote(&link.url, &mut json);
+        json.push_str(",\"t\":");
+        crate::search::quote(&link.title, &mut json);
+        json.push_str(",\"w\":[");
+        for (k, widget) in page.widgets.iter().enumerate() {
+            if k > 0 {
+                json.push(',');
+            }
+            json.push_str("{\"i\":");
+            crate::search::quote(&widget.id, &mut json);
+            json.push_str(",\"k\":");
+            crate::search::quote(&widget.kind, &mut json);
+            json.push_str(&format!(",\"n\":{}}}", widget.total));
+        }
+        json.push_str("]}");
+    }
+    json.push(']');
+    if !first {
+        let to = out.join("widgets.json");
+        fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
+    }
+    Ok(())
+}
+
 /// What the search keeps of a page once it is written.
 struct Searchable {
     headings: Vec<crate::page::Heading>,
     aliases: Vec<crate::page::Alias>,
     no_search: bool,
+    widgets: Vec<crate::page::WidgetInfo>,
 }
 
 #[derive(Clone, Serialize)]
@@ -271,6 +310,7 @@ struct NavView {
 struct SectionView {
     name: String,
     sidebar: bool,
+    pager: bool,
     title: String,
     description: String,
     url: String,
@@ -663,6 +703,7 @@ pub fn build(opts: &Options) -> Result<Report> {
             SectionView {
                 name: s.name.clone(),
                 sidebar: s.sidebar,
+                pager: s.pager,
                 title: s.title.clone().unwrap_or_else(|| s.name.clone()),
                 description: s.description.clone(),
                 url,
@@ -783,6 +824,7 @@ pub fn build(opts: &Options) -> Result<Report> {
             headings: page.headings,
             aliases: page.aliases,
             no_search: page.no_search,
+            widgets: page.widgets,
         })
     })
     .into_iter()
@@ -882,6 +924,9 @@ pub fn build(opts: &Options) -> Result<Report> {
             _ => crate::search::to_json(&index),
         };
         fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
+    }
+    if !scope.partial() {
+        write_widgets(&opts.out, &links_of_pages, &pages)?;
     }
     Ok(Report { pages: written })
 }

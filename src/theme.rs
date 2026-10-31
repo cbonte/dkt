@@ -24,6 +24,7 @@ static DOCS: Builtin = Builtin {
         file!("docs", "templates/page.html"),
         file!("docs", "templates/section.html"),
         file!("docs", "templates/partials/brand.html"),
+        file!("docs", "templates/partials/pager.html"),
         file!("docs", "templates/partials/side-top.html"),
     ],
     statics: &[
@@ -45,6 +46,7 @@ static PAPER: Builtin = Builtin {
         file!("paper", "templates/page.html"),
         file!("paper", "templates/section.html"),
         file!("paper", "templates/partials/brand.html"),
+        file!("paper", "templates/partials/pager.html"),
     ],
     statics: &[
         file!("paper", "static/paper.css"),
@@ -65,6 +67,7 @@ static PLAIN: Builtin = Builtin {
         file!("plain", "templates/page.html"),
         file!("plain", "templates/section.html"),
         file!("plain", "templates/partials/brand.html"),
+        file!("plain", "templates/partials/pager.html"),
     ],
     statics: &[
         file!("plain", "static/plain.css"),
@@ -123,6 +126,7 @@ mod tests {
                 "page.html",
                 "section.html",
                 "partials/brand.html",
+                "partials/pager.html",
             ] {
                 assert!(
                     theme.template(template).is_some(),

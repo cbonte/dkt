@@ -234,3 +234,25 @@ fn an_ansi_block_keeps_its_colours() {
         page.content
     );
 }
+
+#[test]
+fn the_page_counts_what_a_reader_can_finish_in_its_widgets() {
+    let page = page::render(
+        "<!-- site: widget checklist id=c -->\n- [ ] a\n- [x] b\n<!-- site: end -->\n\n<!-- site: widget steps -->\n1. one\n   - nested\n2. two\n3. three\n<!-- site: end -->\n\n<!-- site: widget quiz answer=1 id=q -->\nQ?\n\n1. yes\n2. no\n<!-- site: end -->\n\n<!-- site: widget flashcards id=f -->\n| Front | Back |\n| --- | --- |\n| a | b |\n| c | d |\n<!-- site: end -->\n\n<!-- site: widget tabs -->\n### One\n\ntext\n<!-- site: end -->\n",
+        None,
+    );
+    let summary: Vec<(String, String, usize)> = page
+        .widgets
+        .iter()
+        .map(|w| (w.id.clone(), w.kind.clone(), w.total))
+        .collect();
+    assert_eq!(
+        summary,
+        [
+            ("c".to_string(), "checklist".to_string(), 2),
+            ("w2".to_string(), "steps".to_string(), 3),
+            ("q".to_string(), "quiz".to_string(), 1),
+            ("f".to_string(), "flashcards".to_string(), 2),
+        ]
+    );
+}

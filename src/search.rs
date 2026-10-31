@@ -95,7 +95,7 @@ pub fn entries<'a>(pages: impl IntoIterator<Item = Source<'a>>) -> Vec<Entry> {
     out
 }
 
-fn quote(text: &str, out: &mut String) {
+pub(crate) fn quote(text: &str, out: &mut String) {
     out.push('"');
     for c in text.chars() {
         match c {
