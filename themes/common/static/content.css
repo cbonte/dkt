@@ -1,4 +1,4 @@
-/* What a document holds that the themes do not style on their own: the alerts and the footnotes. */
+/* What a document holds that the themes do not style on their own: the alerts, the footnotes and the drawings. */
 
 /* An alert is a quote that starts with a kind, such as a note or a warning. */
 blockquote[class*="markdown-alert-"] { --alert: var(--accent, #c2410c); margin: 1em 0; padding: 8px 16px; font-style: normal; color: var(--fg, inherit); border: 0; border-left: 4px solid var(--alert); border-radius: 6px; background: color-mix(in srgb, var(--alert) 9%, transparent); }
@@ -32,3 +32,6 @@ blockquote.markdown-alert-caution::before { content: "Caution"; }
 .footnote-definition { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; font-size: .9em; color: var(--soft, inherit); }
 .footnote-definition > .footnote-definition-label { flex: none; font-size: .85em; vertical-align: baseline; color: var(--muted, inherit); }
 .footnote-definition > p { margin: 0; }
+
+/* A code block that draws with box characters, whose lines have to touch. */
+html pre.box, html pre.box code { line-height: 1.15; font-variant-ligatures: none; }

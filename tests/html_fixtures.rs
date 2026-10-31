@@ -153,3 +153,24 @@ fn a_widget_that_does_not_hold_is_left_as_a_comment() {
     assert!(page.content.contains("<!-- site: widget dance -->"));
     assert!(!page.content.contains("dkt-widget"));
 }
+
+#[test]
+fn a_code_block_that_draws_boxes_is_marked() {
+    let page = page::render(
+        "```text\n┌─┐\n│a│\n└─┘\n```\n\n```text\nplain <b>\n```\n",
+        None,
+    );
+    assert!(
+        page.content.contains(
+            "<pre class=\"box\"><code class=\"language-text\">┌─┐\n│a│\n└─┘\n</code></pre>"
+        ),
+        "{}",
+        page.content
+    );
+    assert!(
+        page.content
+            .contains("<pre><code class=\"language-text\">plain &lt;b&gt;"),
+        "{}",
+        page.content
+    );
+}

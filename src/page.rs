@@ -80,6 +80,26 @@ fn plain_text(events: &[Event<'_>]) -> String {
     out.trim().to_string()
 }
 
+/// True for a character that draws a line, a corner, a block or an arrow head in a text.
+fn is_box(c: char) -> bool {
+    ('\u{2500}'..='\u{25ff}').contains(&c)
+}
+
+/// True when the code block that starts at `from` holds characters that draw boxes.
+fn draws_boxes(events: &[Event<'_>], from: usize) -> bool {
+    events[from + 1..]
+        .iter()
+        .take_while(|e| !matches!(e, Event::End(TagEnd::CodeBlock)))
+        .any(|e| matches!(e, Event::Text(t) if t.chars().any(is_box)))
+}
+
+fn html_escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
 /// Index of the first event from `from` on that satisfies `is_end`.
 fn find_end(events: &[Event<'_>], from: usize, is_end: impl Fn(&Event<'_>) -> bool) -> usize {
     (from..events.len())
@@ -259,6 +279,33 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                     })
                     .collect();
                 body.push(Event::Html(CowStr::from(crate::diagram::to_svg(&text))));
+                i = end + 1;
+            }
+            // A block that draws with box characters is marked, so that a theme can close the gaps
+            // between its lines.
+            Event::Start(Tag::CodeBlock(kind)) if draws_boxes(&events, i) => {
+                let end = find_end(&events, i + 1, |e| {
+                    matches!(e, Event::End(TagEnd::CodeBlock))
+                });
+                let text: String = events[i + 1..end]
+                    .iter()
+                    .filter_map(|e| match e {
+                        Event::Text(t) => Some(t.as_ref()),
+                        _ => None,
+                    })
+                    .collect();
+                let class = match kind {
+                    CodeBlockKind::Fenced(info) => info
+                        .split_whitespace()
+                        .next()
+                        .map(|lang| format!(" class=\"language-{}\"", html_escape(lang)))
+                        .unwrap_or_default(),
+                    CodeBlockKind::Indented => String::new(),
+                };
+                body.push(Event::Html(CowStr::from(format!(
+                    "<pre class=\"box\"><code{class}>{}</code></pre>\n",
+                    html_escape(&text)
+                ))));
                 i = end + 1;
             }
             // A table that is wider than the page scrolls inside its own box.
