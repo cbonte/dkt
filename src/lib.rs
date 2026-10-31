@@ -15,6 +15,7 @@ pub mod model;
 pub mod options;
 pub mod page;
 pub mod pager;
+pub mod parallel;
 pub mod parse;
 pub mod rst;
 pub mod search;

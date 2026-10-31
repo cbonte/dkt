@@ -20,6 +20,7 @@ use crate::annotation::Annotation;
 use crate::cmd::lint::finding::{DEFAULT_RULES, Rule};
 use crate::cmd::lint::rules;
 use crate::page::{self, Hooks, Page};
+use crate::parallel;
 use config::Config;
 use links::{LinkMap, normalize};
 
@@ -243,6 +244,13 @@ struct Entry {
     order: i64,
 }
 
+/// What the search keeps of a page once it is written.
+struct Searchable {
+    headings: Vec<crate::page::Heading>,
+    aliases: Vec<crate::page::Alias>,
+    no_search: bool,
+}
+
 #[derive(Clone, Serialize)]
 struct PageLink {
     title: String,
@@ -386,12 +394,7 @@ fn rule(name: &str) -> Result<Rule> {
 }
 
 /// Runs the check of `dkt lint` over the documents and returns what it found.
-fn check(
-    cfg: &Config,
-    root: &Path,
-    entries: &[Entry],
-    home: Option<&Entry>,
-) -> Result<Vec<String>> {
+fn check(cfg: &Config, root: &Path, documents: &[(&Entry, &str)]) -> Result<Vec<String>> {
     let mut enabled: HashSet<Rule> = DEFAULT_RULES.into_iter().collect();
     for name in &cfg.lint.enable {
         enabled.insert(rule(name)?);
@@ -399,15 +402,14 @@ fn check(
     for name in &cfg.lint.disable {
         enabled.remove(&rule(name)?);
     }
-    let mut findings = Vec::new();
-    for entry in entries.iter().chain(home) {
+    let found = parallel::map(documents, |(entry, text)| {
         let path = root.join(&entry.src);
-        let text = read_document(root, entry)?;
-        for finding in rules::check(&path, &text, &enabled, LINE_LENGTH) {
-            findings.push(finding.render(&entry.src));
-        }
-    }
-    Ok(findings)
+        rules::check(&path, text, &enabled, LINE_LENGTH)
+            .into_iter()
+            .map(|finding| finding.render(&entry.src))
+            .collect::<Vec<_>>()
+    });
+    Ok(found.into_iter().flatten().collect())
 }
 
 /// The theme a site names, or the default one when it names none: a directory with `templates` or `static` next to the properties file,
@@ -547,19 +549,30 @@ pub fn build(opts: &Options) -> Result<Report> {
             bail!("the site has no page from '{src}'");
         }
     }
+    // Each document is read and converted once, and the three passes below share the result.
+    let documents = parallel::map(&entries, |entry| {
+        scope
+            .covers(entry)
+            .then(|| read_document(&root, entry))
+            .transpose()
+    })
+    .into_iter()
+    .collect::<Result<Vec<Option<String>>>>()?;
+    let home_doc = home_entry(&cfg, &base)?.filter(|_| scope.builds_home());
+    let home_md = home_doc
+        .as_ref()
+        .map(|entry| read_document(&root, entry))
+        .transpose()?;
     if opts.lint {
-        let findings = check(
-            &cfg,
-            &root,
-            &entries
-                .iter()
-                .filter(|e| scope.covers(e))
-                .cloned()
-                .collect::<Vec<_>>(),
-            home_entry(&cfg, &base)?
-                .filter(|_| scope.builds_home())
-                .as_ref(),
-        )?;
+        let mut checked: Vec<(&Entry, &str)> = entries
+            .iter()
+            .zip(&documents)
+            .filter_map(|(entry, md)| Some((entry, md.as_deref()?)))
+            .collect();
+        if let (Some(entry), Some(md)) = (&home_doc, &home_md) {
+            checked.push((entry, md));
+        }
+        let findings = check(&cfg, &root, &checked)?;
         if !findings.is_empty() {
             bail!(
                 "the documents do not pass the check:\n{}",
@@ -570,26 +583,26 @@ pub fn build(opts: &Options) -> Result<Report> {
 
     // The first pass reads what each document says of itself, so that a hidden one is not linked.
     // A document that is out of the scope is not read, and is taken as served.
-    let mut metas = Vec::new();
-    for entry in &entries {
-        metas.push(if scope.covers(entry) {
-            let md = read_document(&root, entry)?;
-            Some(meta(entry, &page::render(&md, None)))
-        } else {
-            None
-        });
-    }
+    let jobs: Vec<(&Entry, Option<&String>)> = entries
+        .iter()
+        .zip(documents.iter().map(Option::as_ref))
+        .collect();
+    let metas = parallel::map(&jobs, |(entry, md)| {
+        md.map(|md| meta(entry, &page::render(md, None)))
+    });
     let mut kept = Vec::new();
     let mut kept_meta = Vec::new();
+    let mut kept_md = Vec::new();
     let mut served_entries = Vec::new();
-    for (entry, meta) in entries.drain(..).zip(metas) {
+    for ((entry, meta), md) in entries.drain(..).zip(metas).zip(documents) {
         if meta.as_ref().is_some_and(|m| m.hidden) {
             continue;
         }
         served_entries.push((entry.src.clone(), entry.url.clone()));
-        if let Some(meta) = meta {
+        if let (Some(meta), Some(md)) = (meta, md) {
             kept.push(entry);
             kept_meta.push(meta);
+            kept_md.push(md);
         }
     }
     let entries = kept;
@@ -628,28 +641,18 @@ pub fn build(opts: &Options) -> Result<Report> {
         note.with_images(prefix(src), dark.map(prefix)).figure()
     };
 
-    // The second pass renders with the links of the site.
-    let mut rendered: Vec<(Page, PageLink)> = Vec::new();
-    for (entry, meta) in entries.iter().zip(&kept_meta) {
-        let md = read_document(&root, entry)?;
-        let rewrite = |target: &str| links.resolve(&entry.src, target);
-        let page = page::render_with(
-            &md,
-            &Hooks {
-                rewrite: Some(&rewrite),
-                figure: Some(&figure),
-            },
-        );
-        let link = PageLink {
+    let links_of_pages: Vec<PageLink> = entries
+        .iter()
+        .zip(&kept_meta)
+        .map(|(entry, meta)| PageLink {
             title: meta.title.clone(),
             nav_title: meta.nav_title.clone(),
             description: meta.description.clone(),
             url: entry.url.clone(),
             weight: meta.weight,
             section: entry.section.clone(),
-        };
-        rendered.push((page, link));
-    }
+        })
+        .collect();
 
     let mut sections: BTreeMap<String, SectionView> = BTreeMap::new();
     for s in &cfg.section {
@@ -666,7 +669,7 @@ pub fn build(opts: &Options) -> Result<Report> {
             },
         );
     }
-    for (_, link) in &rendered {
+    for link in &links_of_pages {
         if let Some(view) = link.section.as_ref().and_then(|n| sections.get_mut(n)) {
             view.pages.push(link.clone());
         }
@@ -744,13 +747,27 @@ pub fn build(opts: &Options) -> Result<Report> {
     } else {
         prepare_out(&opts.out)?;
     }
-    let mut written = 0;
-    for (entry, (page, link)) in entries.iter().zip(&rendered) {
+    // The second pass renders with the links of the site, and writes each page as soon as it is set.
+    let jobs: Vec<(&Entry, &PageLink, &String)> = entries
+        .iter()
+        .zip(&links_of_pages)
+        .zip(&kept_md)
+        .map(|((entry, link), md)| (entry, link, md))
+        .collect();
+    let pages = parallel::map(&jobs, |(entry, link, md)| -> Result<Searchable> {
+        let rewrite = |target: &str| links.resolve(&entry.src, target);
+        let mut page = page::render_with(
+            md,
+            &Hooks {
+                rewrite: Some(&rewrite),
+                figure: Some(&figure),
+            },
+        );
         let view = context! {
             title => &link.title,
             description => &link.description,
-            content => Value::from_safe_string(page.content.clone()),
-            headings => Value::from_serialize(headings(page)),
+            headings => Value::from_serialize(headings(&page)),
+            content => Value::from_safe_string(std::mem::take(&mut page.content)),
             path => &entry.src,
             url => &entry.url,
             section => &entry.section,
@@ -760,8 +777,16 @@ pub fn build(opts: &Options) -> Result<Report> {
         let nav = nav_for(&entry.url, entry.section.as_deref());
         let html = render(&entry.template, view, Value::UNDEFINED, nav)?;
         write_page(&opts.out, &base, &entry.url, &html)?;
-        written += 1;
-    }
+        Ok(Searchable {
+            headings: page.headings,
+            aliases: page.aliases,
+            no_search: page.no_search,
+        })
+    })
+    .into_iter()
+    .collect::<Result<Vec<_>>>()?;
+    drop(kept_md);
+    let mut written = pages.len();
     for s in cfg.section.iter().filter(|s| scope.builds_section(&s.name)) {
         let view = &site.sections[&s.name];
         let page =
@@ -773,19 +798,18 @@ pub fn build(opts: &Options) -> Result<Report> {
     }
     if let Some(home) = cfg.home.as_ref().filter(|_| scope.builds_home()) {
         // The document of the home page gives its content, and its title when it has one.
-        let doc = match home_entry(&cfg, &base)? {
-            Some(entry) => {
-                let md = read_document(&root, &entry)?;
+        let doc = match (&home_doc, &home_md) {
+            (Some(entry), Some(md)) => {
                 let rewrite = |target: &str| links.resolve(&entry.src, target);
                 Some(page::render_with(
-                    &md,
+                    md,
                     &Hooks {
                         rewrite: Some(&rewrite),
                         figure: Some(&figure),
                     },
                 ))
             }
-            None => None,
+            _ => None,
         };
         let page = context! {
             title => doc.as_ref().and_then(|d| d.title.clone()).unwrap_or_else(|| cfg.site.title.clone()),
@@ -823,21 +847,22 @@ pub fn build(opts: &Options) -> Result<Report> {
     if cfg.site.search {
         // A page of a section is told from the same page of another section by the title of the
         // section, as in `Configuration Manual - HAProxy 3.4`.
-        let titles: Vec<String> = rendered
+        let titles: Vec<String> = links_of_pages
             .iter()
             .map(
-                |(_, link)| match link.section.as_ref().and_then(|n| site.sections.get(n)) {
+                |link| match link.section.as_ref().and_then(|n| site.sections.get(n)) {
                     Some(view) => format!("{} - {}", link.title, view.title),
                     None => link.title.clone(),
                 },
             )
             .collect();
         let index = crate::search::entries(
-            rendered
+            links_of_pages
                 .iter()
+                .zip(&pages)
                 .zip(&titles)
-                .filter(|((page, _), _)| !page.no_search)
-                .map(|((page, link), title)| crate::search::Source {
+                .filter(|((_, page), _)| !page.no_search)
+                .map(|((link, page), title)| crate::search::Source {
                     title,
                     description: &link.description,
                     url: &link.url,
@@ -849,7 +874,7 @@ pub fn build(opts: &Options) -> Result<Report> {
         let json = match fs::read_to_string(&to) {
             // A partial build keeps what the index says of the pages it did not build.
             Ok(existing) if scope.partial() => {
-                let built: HashSet<String> = rendered.iter().map(|(_, l)| l.url.clone()).collect();
+                let built: HashSet<String> = links_of_pages.iter().map(|l| l.url.clone()).collect();
                 crate::search::merge(&existing, &built, &index)
             }
             _ => crate::search::to_json(&index),

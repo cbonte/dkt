@@ -295,6 +295,7 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
         page.hidden |= note.has("hide");
         page.no_search |= note.has("no-search");
     }
+    drop(events);
     html::push_html(&mut page.content, body.into_iter());
     page
 }

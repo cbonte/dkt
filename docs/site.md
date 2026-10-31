@@ -15,6 +15,9 @@ which `--output` (`-o`) names, is cleared before each build, but only when `dkt 
 a `.dkt-site` file inside tells. Any other directory that is not empty is left alone, and the build
 stops.
 
+The documents are read and rendered on several threads, as many as the cores up to 8. The
+variable `DKT_JOBS` sets the number, and `DKT_JOBS=1` builds on one thread with the least memory.
+
 ## Building a part of a site
 
 `--only` builds a part of the site and leaves the rest of the output directory as it is. It can be
