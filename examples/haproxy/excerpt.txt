@@ -1,0 +1,62 @@
+4. Proxies
+----------
+
+Proxy configuration can be located in a set of sections :
+  - defaults [<name>] [ from <defaults_name> ]
+  - frontend <name> [ from <defaults_name> ]
+  - backend  <name> [ from <defaults_name> ]
+  - listen   <name> [ from <defaults_name> ]
+
+
+4.2. Alphabetically sorted keywords reference
+---------------------------------------------
+
+This section provides a description of each keyword and its usage.
+
+
+balance <algorithm> [ <arguments> ]
+balance url_param <param> [check_post]
+  Define the load balancing algorithm to be used in a backend.
+
+  May be used in sections :   defaults | frontend | listen | backend
+                                 yes   |    no    |   yes  |   yes
+
+  Arguments :
+    <algorithm> is the algorithm used to select a server when doing load
+                balancing. This only applies when no persistence information
+                is available, or when a connection is redispatched to another
+                server. <algorithm> may be one of the following :
+
+      roundrobin  Each server is used in turns, according to their weights.
+                  This is the smoothest and fairest algorithm when the server's
+                  processing time remains equally distributed.
+
+      leastconn   The server with the lowest number of connections receives the
+                  connection. Round-robin is performed within groups of servers
+                  of the same load to ensure that all servers will be used.
+
+      source      The source IP address is hashed and divided by the total
+                  weight of the running servers to designate which server will
+                  receive the request.
+
+  Examples :
+        balance roundrobin
+        balance url_param session_id check_post 64
+
+  See also : "dispatch", "cookie", "transparent", "hash-type" and "bind".
+
+
+maxconn <conns>
+  Fix the maximum number of concurrent connections on a frontend
+
+  May be used in sections :   defaults | frontend | listen | backend
+                                 yes   |    yes   |   yes  |   no
+
+  Arguments :
+    <conns>   is the maximum number of connections the frontend will accept
+              before it stops listening.
+
+  Example :
+        listen http_proxy
+            bind :80
+            maxconn 10000

@@ -1,0 +1,35 @@
+[site]
+title = "Sample"
+description = "The same pages, in the docs theme, with its own colours."
+base_url = "https://cbonte.github.io/dkt/demos/themes/colours"
+theme = "docs"
+
+[[nav]]
+name = "Home"
+url = "/"
+
+[[nav]]
+name = "Guide"
+url = "/guide/"
+section = "guide"
+
+[[section]]
+name = "guide"
+title = "Guide"
+description = "Two pages."
+sidebar = true
+
+[[page]]
+glob = "pages/*.md"
+section = "guide"
+order = ["welcome", "tour"]
+
+[colors.light]
+accent = "#15803d"
+accent-bg = "#e6f4ea"
+link = "#15803d"
+
+[colors.dark]
+accent = "#6ee7a0"
+accent-bg = "#10281a"
+link = "#6ee7a0"

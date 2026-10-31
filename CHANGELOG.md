@@ -6,8 +6,10 @@
 - rst: read the files that an include directive names, and the entries of a toctree.
 - rst: read list and csv tables, version notes, topics, rubrics, math, option lists and doctests.
 - rst: read named and anonymous references, and the common inline roles.
+- site: show examples of formats, themes, widgets and terminal output in a section.
 - widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
 - theme: add a copy button to the code blocks.
+- theme: style the alerts and the footnotes of a document, with a colour for each kind of alert.
 - lint: report a widget that is unknown, nested or never closed.
 
 ## Fixed

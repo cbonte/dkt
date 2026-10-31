@@ -30,6 +30,7 @@ static DOCS: Builtin = Builtin {
         file!("docs", "static/docs.css"),
         file!("docs", "static/docs.js"),
         file!("docs", "static/search.js"),
+        file!("common", "static/content.css"),
         file!("common", "static/widgets.css"),
         file!("common", "static/widgets.js"),
     ],
@@ -48,6 +49,7 @@ static PAPER: Builtin = Builtin {
         file!("paper", "static/paper.css"),
         file!("paper", "static/paper.js"),
         file!("paper", "static/search.js"),
+        file!("common", "static/content.css"),
         file!("common", "static/widgets.css"),
         file!("common", "static/widgets.js"),
     ],
@@ -65,6 +67,7 @@ static PLAIN: Builtin = Builtin {
     statics: &[
         file!("plain", "static/plain.css"),
         file!("plain", "static/search.js"),
+        file!("common", "static/content.css"),
         file!("common", "static/widgets.css"),
         file!("common", "static/widgets.js"),
     ],
@@ -128,7 +131,7 @@ mod tests {
                     .static_files()
                     .any(|(p, _)| p == format!("{name}.css"))
             );
-            for shared in ["widgets.css", "widgets.js"] {
+            for shared in ["content.css", "widgets.css", "widgets.js"] {
                 assert!(
                     theme.static_files().any(|(p, _)| p == shared),
                     "{name} lacks {shared}"

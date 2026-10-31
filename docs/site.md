@@ -142,8 +142,9 @@ In the `docs` theme, every heading below the title is a link to itself, with a b
 address when the pointer is over it. A wide table scrolls in its own box, and a long entry of a menu
 ends with an ellipsis and shows its text as its title.
 
-Every built-in theme carries [widgets](widgets.md) and a copy button on the code blocks, with the
-files `widgets.css` and `widgets.js`.
+Every built-in theme styles the alerts and the footnotes of a document with `content.css`. It carries
+[widgets](../examples/widgets.md) and a copy button on the code blocks, with the files `widgets.css`
+and `widgets.js`.
 
 `docs` and `paper` carry a switch between the light and the dark theme. Without a choice, all 3
 follow the system.

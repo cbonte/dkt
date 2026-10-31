@@ -266,3 +266,27 @@ fn a_file_that_no_format_claims_is_written_as_it_is_with_a_warning() {
     assert!(String::from_utf8_lossy(&out.stdout).contains("• as written"));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_terminal_example_of_the_site_is_what_cat_writes() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let page = std::fs::read_to_string(root.join("examples/terminal.md")).expect("read the page");
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_dkt"))
+        .args([
+            "cat",
+            "--color",
+            "never",
+            "--width",
+            "72",
+            "--borders",
+            "unicode",
+        ])
+        .arg(root.join("examples/terminal/sample.md"))
+        .output()
+        .expect("run dkt cat");
+    let written = String::from_utf8(out.stdout).expect("utf-8");
+    assert!(
+        page.contains(written.trim_end()),
+        "examples/terminal.md no longer shows what dkt cat writes:\n{written}"
+    );
+}

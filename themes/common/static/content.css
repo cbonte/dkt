@@ -1,0 +1,34 @@
+/* What a document holds that the themes do not style on their own: the alerts and the footnotes. */
+
+/* An alert is a quote that starts with a kind, such as a note or a warning. */
+blockquote[class*="markdown-alert-"] { --alert: var(--accent, #c2410c); margin: 1em 0; padding: 8px 16px; font-style: normal; color: var(--fg, inherit); border: 0; border-left: 4px solid var(--alert); border-radius: 6px; background: color-mix(in srgb, var(--alert) 9%, transparent); }
+blockquote[class*="markdown-alert-"] > :first-child { margin-top: 0; }
+blockquote[class*="markdown-alert-"] > :last-child { margin-bottom: 0; }
+blockquote[class*="markdown-alert-"]::before { display: block; margin-bottom: 4px; font-weight: 700; color: var(--alert); }
+blockquote.markdown-alert-note { --alert: #2563eb; }
+blockquote.markdown-alert-tip { --alert: #15803d; }
+blockquote.markdown-alert-important { --alert: #7c3aed; }
+blockquote.markdown-alert-warning { --alert: #b45309; }
+blockquote.markdown-alert-caution { --alert: #b91c1c; }
+blockquote.markdown-alert-note::before { content: "Note"; }
+blockquote.markdown-alert-tip::before { content: "Tip"; }
+blockquote.markdown-alert-important::before { content: "Important"; }
+blockquote.markdown-alert-warning::before { content: "Warning"; }
+blockquote.markdown-alert-caution::before { content: "Caution"; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) blockquote.markdown-alert-note { --alert: #60a5fa; }
+  :root:not([data-theme="light"]) blockquote.markdown-alert-tip { --alert: #4ade80; }
+  :root:not([data-theme="light"]) blockquote.markdown-alert-important { --alert: #a78bfa; }
+  :root:not([data-theme="light"]) blockquote.markdown-alert-warning { --alert: #fbbf24; }
+  :root:not([data-theme="light"]) blockquote.markdown-alert-caution { --alert: #f87171; }
+}
+:root[data-theme="dark"] blockquote.markdown-alert-note { --alert: #60a5fa; }
+:root[data-theme="dark"] blockquote.markdown-alert-tip { --alert: #4ade80; }
+:root[data-theme="dark"] blockquote.markdown-alert-important { --alert: #a78bfa; }
+:root[data-theme="dark"] blockquote.markdown-alert-warning { --alert: #fbbf24; }
+:root[data-theme="dark"] blockquote.markdown-alert-caution { --alert: #f87171; }
+
+/* A footnote is written under the text, with its number on the same line. */
+.footnote-definition { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; font-size: .9em; color: var(--soft, inherit); }
+.footnote-definition > .footnote-definition-label { flex: none; font-size: .85em; vertical-align: baseline; color: var(--muted, inherit); }
+.footnote-definition > p { margin: 0; }

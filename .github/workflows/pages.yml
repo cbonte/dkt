@@ -19,8 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo run --release -- site dkt.toml -o public
+      - run: cargo build --release
+      - run: target/release/dkt site dkt.toml -o public
       - run: cp -r demos public/demos
+      - run: |
+          for theme in docs paper plain colours; do
+            target/release/dkt site examples/themes/$theme.toml -o public/demos/themes/$theme
+          done
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

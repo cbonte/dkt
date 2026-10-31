@@ -128,10 +128,11 @@ Every code block of the site gets a button that copies it, with or without a wid
 
 ## In a theme of your own
 
-A theme that is not built in loads the 2 files the built-in themes carry, `widgets.css` and
-`widgets.js`, from its `base.html`.
+A theme that is not built in loads the files the built-in themes carry, `content.css`, `widgets.css`
+and `widgets.js`, from its `base.html`.
 
 ```
+<link rel="stylesheet" href="{{ site.base_path }}/content.css">
 <link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
 <script src="{{ site.base_path }}/widgets.js" defer></script>
 ```

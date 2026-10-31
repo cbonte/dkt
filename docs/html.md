@@ -96,7 +96,7 @@ an annotation when it starts with `site:` and a kind. The kind sets what it appl
 | `figure`           | the place where it is written    | `src` or `name`, `dark`, `alt`, `caption`                                   |
 | `replace` to `end` | the blocks between them          | the keys of `figure`, and the blocks give way to its figure                 |
 | `alias`            | the section it is written in     | `words`, the words that find the section in a search                        |
-| `widget` to `end`  | the blocks between them          | the name of a [widget](widgets.md), `id`, and `answer` for a quiz           |
+| `widget` to `end`  | the blocks between them          | the name of a [widget](../examples/widgets.md), `id`, and `answer` for a quiz           |
 
 ```
 <!-- site: page title="The tour" nav-title="Tour" weight=2 -->

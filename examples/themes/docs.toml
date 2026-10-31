@@ -1,0 +1,25 @@
+[site]
+title = "Sample"
+description = "The same pages, in the docs theme."
+base_url = "https://cbonte.github.io/dkt/demos/themes/docs"
+theme = "docs"
+
+[[nav]]
+name = "Home"
+url = "/"
+
+[[nav]]
+name = "Guide"
+url = "/guide/"
+section = "guide"
+
+[[section]]
+name = "guide"
+title = "Guide"
+description = "Two pages."
+sidebar = true
+
+[[page]]
+glob = "pages/*.md"
+section = "guide"
+order = ["welcome", "tour"]

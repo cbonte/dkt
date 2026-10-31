@@ -15,6 +15,11 @@ url = "/commands/"
 section = "commands"
 
 [[nav]]
+name = "Examples"
+url = "/examples/"
+section = "examples"
+
+[[nav]]
 name = "HAProxy demo"
 url = "/demos/haproxy/"
 
@@ -27,10 +32,34 @@ title = "Commands"
 description = "One guide per command."
 sidebar = true
 
+[[section]]
+name = "examples"
+title = "Examples"
+description = "What a page looks like, in several formats, themes and components."
+sidebar = true
+
 [[page]]
 glob = "docs/*.md"
 section = "commands"
-order = ["cat", "fmt", "toc", "lint", "convert", "html", "site", "widgets", "rst", "haproxy"]
+order = ["cat", "fmt", "toc", "lint", "convert", "html", "site", "rst", "haproxy"]
+
+[[page]]
+glob = "examples/*.md"
+section = "examples"
+order = ["markdown", "formats", "widgets", "themes", "terminal"]
+
+[[page]]
+src = "examples/rst/api.rst"
+url = "/examples/rst-sample/"
+section = "examples"
+title = "reStructuredText sample"
+
+[[page]]
+src = "examples/haproxy/excerpt.txt"
+format = "haproxy"
+url = "/examples/haproxy-sample/"
+section = "examples"
+title = "HAProxy sample"
 
 [data]
 install = "cargo install --path ."
