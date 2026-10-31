@@ -47,3 +47,4 @@
 - haproxy: read paragraphs, examples and lists inside the items of a list, and notes of every kind.
 - haproxy: link the keywords that start an item or a row of the matrix, and flag deprecated keywords.
 - haproxy: read chapters whose number is closed with a parenthesis.
+- convert: convert a document in any format to Markdown.
