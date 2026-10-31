@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }} - {{ site.title }}{% endblock %}
+{% block main %}
+<div class="layout"><main class="prose">
+<h1>{{ section.title }}</h1>
+{% if section.description %}<p>{{ section.description }}</p>{% endif %}
+<div class="cards">
+{% for p in section.pages %}<a class="card" href="{{ p.url }}"><b>{{ p.title }}</b>{% if p.description %}<span>{{ p.description }}</span>{% endif %}</a>
+{% endfor %}
+</div>
+</main></div>
+{% endblock %}

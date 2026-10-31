@@ -1,0 +1,18 @@
+{# A page of a section: the other pages of the section on the left when it asks for a sidebar, the headings on the right. #}
+{% extends "base.html" %}
+{% block main %}
+{% set sec = site.sections[page.section] if page.section else none %}
+{% set toc = page.headings | selectattr("level", "in", [2, 3]) | list %}
+<div class="layout{% if sec and sec.sidebar %} has-side{% endif %}">
+{% if sec and sec.sidebar %}
+<aside class="side">{% include "partials/side-top.html" %}<b>{{ sec.title }}</b>{% for p in sec.pages %}<a href="{{ p.url }}" title="{{ p.nav_title }}"{% if p.url == page.url %} aria-current="page"{% endif %}>{{ p.nav_title }}</a>{% endfor %}</aside>
+{% endif %}
+<main class="prose">
+{% if sec %}<div class="crumbs">{{ sec.title }} <span aria-hidden="true">/</span> {{ page.nav_title }}</div>{% endif %}
+{{ page.content }}
+</main>
+{% if toc %}
+<aside class="toc"><b>On this page</b>{% for h in toc %}<a href="#{{ h.id }}" class="l{{ h.level }}" title="{{ h.text }}">{{ h.text }}</a>{% endfor %}</aside>
+{% endif %}
+</div>
+{% endblock %}

@@ -48,3 +48,10 @@
 - haproxy: link the keywords that start an item or a row of the matrix, and flag deprecated keywords.
 - haproxy: read chapters whose number is closed with a parenthesis.
 - convert: convert a document in any format to Markdown.
+- html: read a document in any format, from its extension or with --format.
+- theme: cut the long entries of the menus with an ellipsis and a title.
+- theme: make every heading a link to itself, and show a link to copy on hover.
+- theme: fold the titles of level 3 in the menu on the right of the docs theme.
+- html: render Markdown as an HTML body or a page in a template, with GitHub anchors.
+- html: act on site annotations written as comments: a page title and weight, a figure, a replaced region.
+- html: draw a diagram block as an SVG figure.

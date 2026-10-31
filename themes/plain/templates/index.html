@@ -1,0 +1,15 @@
+{# The home page: the title and the description of the site, then the pages of each section. #}
+{% extends "base.html" %}
+{% block title %}{{ site.title }}{% endblock %}
+{% block main %}
+<h1>{{ site.title }}</h1>
+{% if site.description %}<p>{{ site.description }}</p>{% endif %}
+{% if data.install %}<pre><code>{{ data.install }}</code></pre>{% endif %}
+{% for name, sec in site.sections | items %}
+<h2>{{ sec.title }}</h2>
+<ul>
+{% for p in sec.pages %}<li><a href="{{ p.url }}">{{ p.title }}</a>{% if p.description %}: {{ p.description }}{% endif %}</li>
+{% endfor %}
+</ul>
+{% endfor %}
+{% endblock %}

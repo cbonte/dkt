@@ -3,5 +3,6 @@
 pub mod cat;
 pub mod convert;
 pub mod fmt;
+pub mod html;
 pub mod lint;
 pub mod toc;

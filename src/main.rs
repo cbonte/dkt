@@ -4,7 +4,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
 use dkt::cli_extras::{self, is_broken_pipe};
-use dkt::cmd::{cat, convert, fmt, lint, toc};
+use dkt::cmd::{cat, convert, fmt, html, lint, toc};
 
 /// Document tools for the terminal.
 #[derive(Parser, Debug)]
@@ -28,6 +28,8 @@ enum Command {
     Cat(cat::Args),
     /// Reformat Markdown, rewrapping prose without touching markup.
     Fmt(fmt::Args),
+    /// Render a document as HTML, with the anchors GitHub gives.
+    Html(html::Args),
     /// Insert or refresh a table of contents in a Markdown file.
     Toc(toc::Args),
     /// Check Markdown links, anchors and heading structure.
@@ -40,6 +42,7 @@ fn dispatch(command: Command) -> (&'static str, anyhow::Result<ExitCode>) {
     match command {
         Command::Cat(args) => ("cat", cat::run(&args)),
         Command::Fmt(args) => ("fmt", fmt::run(&args)),
+        Command::Html(args) => ("html", html::run(&args)),
         Command::Toc(args) => ("toc", toc::run(&args)),
         Command::Lint(args) => ("lint", lint::run(&args)),
         Command::Convert(args) => ("convert", convert::run(&args)),

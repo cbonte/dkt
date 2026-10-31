@@ -1,0 +1,75 @@
+<h1 id="the-page-title">The page title</h1>
+<p>The paragraph that directly follows the title is its description.</p>
+<h2 id="inline"><a href="#inline">Inline</a></h2>
+<p>Some <em>emphasis</em>, some <strong>strong</strong> text, <del>strikethrough</del>, <code>code</code>, a <a href="other.md#part">link</a>, a bare
+<a href="https://example.com">https://example.com</a> and an image <img src="img/shot.png" alt="alt text" title="A shot" />.
+A hard break ends this line<br />
+and the next one starts here.</p>
+<h2 id="lists"><a href="#lists">Lists</a></h2>
+<ul>
+<li>
+<p>a tight item</p>
+</li>
+<li>
+<p>another, with a nested list:</p>
+<ul>
+<li>nested a</li>
+<li>nested b</li>
+</ul>
+</li>
+<li>
+<p>a loose item</p>
+<p>with a second paragraph</p>
+<pre><code class="language-sh">and a code block
+</code></pre>
+</li>
+</ul>
+<ol>
+<li>first</li>
+<li>second</li>
+</ol>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+done</li>
+<li><input disabled="" type="checkbox"/>
+to do</li>
+</ul>
+<h2 id="tables"><a href="#tables">Tables</a></h2>
+<div class="table-wrap"><table><thead><tr><th>Key</th><th>Meaning</th><th style="text-align: right">Right</th></tr></thead><tbody>
+<tr><td><code>a</code></td><td>a | b</td><td style="text-align: right">1</td></tr>
+<tr><td><strong>b</strong></td><td><a href="#tables">link</a></td><td style="text-align: right">22</td></tr>
+</tbody></table>
+</div>
+<h2 id="quotes-and-alerts"><a href="#quotes-and-alerts">Quotes and alerts</a></h2>
+<blockquote>
+<p>A plain quote
+over 2 lines.</p>
+</blockquote>
+<blockquote class="markdown-alert-note">
+<p>A note, as GitHub shows it.</p>
+</blockquote>
+<blockquote class="markdown-alert-warning">
+<p>A warning.</p>
+</blockquote>
+<h2 id="code"><a href="#code">Code</a></h2>
+<pre><code class="language-rust">fn main() {
+    println!("&lt;tag&gt; &amp; more");
+}
+</code></pre>
+<pre><code>an indented block
+</code></pre>
+<h2 id="raw-html"><a href="#raw-html">Raw HTML</a></h2>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dark.png">
+  <img src="img/light.png" alt="the screen">
+</picture>
+<!-- a comment, invisible on GitHub -->
+<h2 id="notes"><a href="#notes">Notes</a></h2>
+<p>A sentence with a note.<sup class="footnote-reference"><a href="#1">1</a></sup></p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>The note text.</p>
+</div>
+<h2 id="duplicates"><a href="#duplicates">Duplicates</a></h2>
+<h3 id="same"><a href="#same">Same</a></h3>
+<h3 id="same-1"><a href="#same-1">Same</a></h3>
+<h3 id="same-2"><a href="#same-2">Same</a></h3>

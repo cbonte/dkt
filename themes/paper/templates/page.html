@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block main %}
+{% set sec = site.sections[page.section] if page.section else none %}
+<main class="prose">
+{% if sec %}<div class="kicker">{{ sec.title }}</div>{% endif %}
+{{ page.content }}
+{% if sec and sec.pages | length > 1 %}
+<nav class="more" aria-label="{{ sec.title }}">{% for p in sec.pages %}{% if p.url != page.url %}<a href="{{ p.url }}">{{ p.nav_title }}</a>{% endif %}{% endfor %}</nav>
+{% endif %}
+</main>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }} - {{ site.title }}{% endblock %}
+{% block main %}
+<h1>{{ section.title }}</h1>
+{% if section.description %}<p>{{ section.description }}</p>{% endif %}
+<ul>
+{% for p in section.pages %}<li><a href="{{ p.url }}">{{ p.title }}</a>{% if p.description %}: {{ p.description }}{% endif %}</li>
+{% endfor %}
+</ul>
+{% endblock %}

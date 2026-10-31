@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}{{ page.title }}{% if page.section and site.sections[page.section] %} - {{ site.sections[page.section].title }}{% endif %} - {{ site.title }}{% endblock %}</title>
+<meta name="description" content="{{ page.description or site.description }}">
+{% if data.brand and data.brand.favicon %}<link rel="icon" type="image/svg+xml" href="{{ site.base_path }}{{ data.brand.favicon }}">{% endif %}
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="{{ site.base_path }}/paper.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="{{ site.base_path }}/">{% include "partials/brand.html" %}</a>
+<nav>{% for n in nav %}<a href="{{ n.url }}"{% if n.current %} aria-current="page"{% endif %}>{{ n.name }}</a>{% endfor %}</nav>
+{% if site.repo %}<a class="aside" href="{{ site.repo }}">Source</a>{% endif %}
+{% if site.search %}<button type="button" class="aside search-open" aria-label="Search the titles" hidden>Search</button>{% endif %}
+<button type="button" class="aside theme-toggle" aria-label="Switch theme" aria-pressed="false"><span class="to-dark">Dark</span><span class="to-light">Light</span></button>
+</header>
+<div class="rule"></div>
+{% block main %}{% endblock %}
+<footer><span>{{ site.title }}</span>{% if site.repo %} <a href="{{ site.repo }}">{{ site.repo | replace("https://", "") }}</a>{% endif %}</footer>
+{% if site.search %}<dialog class="search" data-base="{{ site.base_path }}" aria-label="Search">
+<input type="search" placeholder="Search the titles" autocomplete="off" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="true">
+<p class="status" role="status">Type to search the titles.</p>
+<div class="results" id="search-results" role="listbox"></div>
+<p class="keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move <kbd>Enter</kbd> to open <kbd>Esc</kbd> to close <kbd>#</kbd> sections only <kbd>&gt;</kbd> pages only</p>
+</dialog>
+<script src="{{ site.base_path }}/search.js"></script>{% endif %}
+<script src="{{ site.base_path }}/paper.js"></script>
+</body>
+</html>
