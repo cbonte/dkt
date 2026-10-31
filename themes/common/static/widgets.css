@@ -123,3 +123,28 @@ tr[hidden] { display: none; }
 .dkt-card:focus-visible { outline: 2px solid var(--accent, #c2410c); outline-offset: 2px; }
 .dkt-actions { display: flex; gap: 8px; margin-top: 10px; }
 .dkt-actions [hidden] { display: none; }
+
+/* Annotated: numbered pins on a picture */
+.dkt-pinned { position: relative; display: block; line-height: 0; }
+.dkt-pinned img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.dkt-pin { position: absolute; display: grid; place-items: center; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; color: #fff; background: var(--accent, #c2410c); border: 2px solid #fff; border-radius: 50%; font: 700 13px/1 sans-serif; cursor: pointer; box-shadow: 0 1px 4px rgb(0 0 0 / .4); }
+.dkt-pin.dkt-lit, .dkt-pin:focus-visible { transform: scale(1.25); outline: 2px solid var(--fg, #000); outline-offset: 2px; }
+.dkt-widget[data-widget="annotated"] li.dkt-lit { background: var(--accent-bg, #fff1e8); border-radius: 6px; }
+.dkt-widget[data-widget="annotated"] li { padding: 2px 6px; }
+
+/* Builder: a form and what it writes */
+.dkt-form { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 10px; }
+.dkt-field { display: grid; gap: 4px; font-size: 13px; color: var(--muted, #5b6370); }
+.dkt-field select, .dkt-field input { min-width: 12em; padding: 5px 8px; font: 14px var(--mono, ui-monospace, monospace); color: var(--fg, inherit); background: var(--bg, transparent); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; }
+
+/* Replay: a terminal session */
+html pre.dkt-screen { min-height: 7em; margin: 0 0 8px; padding: 14px 16px; overflow-x: auto; color: #e8ecf6; background: #0b1020; border-radius: 10px; font: 13px/1.5 var(--mono, ui-monospace, monospace); }
+html pre.dkt-screen code { background: none; padding: 0; color: inherit; font: inherit; white-space: pre; }
+.dkt-cursor { animation: dkt-blink 1.1s steps(1) infinite; }
+@keyframes dkt-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dkt-cursor { animation: none; } }
+
+/* Since: the version that the reader runs */
+.dkt-since { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; font-size: 14px; }
+.dkt-since select { padding: 4px 8px; font: inherit; color: var(--fg, inherit); background: var(--bg, transparent); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; }
+.dkt-widget [hidden] { display: none !important; }

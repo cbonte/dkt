@@ -12,18 +12,22 @@ the blocks of the widget
 The blocks go through the same rendering as the rest of the page, so headings keep their anchors and
 links keep their targets. Without JavaScript the blocks stay in place and the page reads the same.
 
-| Widget       | Blocks it holds                          | Keys                                     |
-| ------------ | ---------------------------------------- | ---------------------------------------- |
-| `tabs`       | a heading for each tab, and what follows | `id`                                     |
-| `checklist`  | a list of tasks                          | `id`                                     |
-| `steps`      | an ordered list                          | `id`                                     |
-| `quiz`       | a question, a list of choices, an answer | `id`, `answer`                           |
-| `carousel`   | slides, separated by thematic breaks     | `id`, `show`, `autoplay`, `loop`, `zoom` |
-| `table`      | a table                                  | `id`                                     |
-| `compare`    | 2 pictures                               | `id`                                     |
-| `diff`       | a code block of the language `diff`      | `id`                                     |
-| `chart`      | a table of numbers                       | `id`, `type`                             |
-| `flashcards` | a table of 2 columns, front and back     | `id`                                     |
+| Widget       | Blocks it holds                                          | Keys                                     |
+| ------------ | -------------------------------------------------------- | ---------------------------------------- |
+| `tabs`       | a heading for each tab, and what follows                 | `id`                                     |
+| `checklist`  | a list of tasks                                          | `id`                                     |
+| `steps`      | an ordered list                                          | `id`                                     |
+| `quiz`       | a question, a list of choices, an answer                 | `id`, `answer`                           |
+| `carousel`   | slides, separated by thematic breaks                     | `id`, `show`, `autoplay`, `loop`, `zoom` |
+| `table`      | a table                                                  | `id`                                     |
+| `compare`    | 2 pictures                                               | `id`                                     |
+| `diff`       | a code block of the language `diff`                      | `id`                                     |
+| `chart`      | a table of numbers                                       | `id`, `type`                             |
+| `flashcards` | a table of 2 columns, front and back                     | `id`                                     |
+| `annotated`  | a picture, and a list with one item for each pin         | `id`, `pins`                             |
+| `builder`    | a table of fields, and a code block that holds the model | `id`                                     |
+| `replay`     | a code block, the lines that start with `$ ` being typed | `id`, `speed`                            |
+| `since`      | headings that start with a version, and their text       | `id`                                     |
 
 `id` names the widget for what the reader did, such as the box ticked or the tab chosen. It is
 letters, digits, hyphens and underscores. A widget with no `id` is named by its place on the page,
@@ -316,6 +320,85 @@ does not know come back. What is known is remembered.
 | Widget     | blocks between 2 comments that the site makes a component of |
 | Annotation | a comment that starts with `site:`                           |
 | Theme      | templates and files that sites share                         |
+
+<!-- site: end -->
+
+## Annotated picture
+
+Numbered pins on a picture, tied to the items of the list that explains them. `pins` gives one
+position for each item, as `x,y` in percent of the picture. Pointing at a pin or at an item lights
+both, and a click on a pin goes to its item.
+
+<!-- site: widget annotated id=anatomy pins="50,9 16,50 62,37 62,82" -->
+
+![A page, with its header, its menu, its text and its code](img/after.svg)
+
+1. The header, with the menu of the site.
+2. The menu of the section.
+3. The text of the page.
+4. A block of code, with its copy button.
+
+<!-- site: end -->
+
+## Builder
+
+A form that writes a command or a file. The table gives the fields (a name, a label and the values),
+and the code block gives the model with the names between braces. A field with several values is a
+choice, and one with a single value is a text that starts as it.
+
+<!-- site: widget builder id=command -->
+
+| Field | Label   | Values                                    |
+| ----- | ------- | ----------------------------------------- |
+| model | Model   | qwen3-coder:latest, llama3.1:70b, mistral |
+| root  | Project | .                                         |
+| mode  | Mode    | act, plan                                 |
+
+```
+lokode --model {model} --root {root} --mode {mode}
+```
+
+<!-- site: end -->
+
+## Replay
+
+A terminal session played back. A line that starts with `$ ` is typed and the other lines appear. It
+starts when it comes into view, and not at all for a reader who asks for less motion, who gets the
+whole session. `speed` sets how fast it goes.
+
+<!-- site: widget replay id=session speed=1.5 -->
+
+```
+$ dkt site dkt.toml -o public
+dkt site: 19 pages written to public
+$ ls public
+commands  examples  index.html  search.json
+$ dkt cat --width 40 README.md | head -3
+# dkt
+
+Doc Kit (dk:t) is a set of tools for documents.
+```
+
+<!-- site: end -->
+
+## Since a version
+
+The headings that start with a version cut the document, and the reader tells which version they
+run. Only the versions that come after it stay, and the choice is remembered.
+
+<!-- site: widget since id=news -->
+
+### 0.3.0
+
+- Added the widgets.
+
+### 0.2.0
+
+- Added the examples.
+
+### 0.1.0
+
+- The first release.
 
 <!-- site: end -->
 

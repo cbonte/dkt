@@ -13,6 +13,9 @@
 - widget: filter and sort a table, compare 2 pictures with a slider and read a diff in 2 sides.
 - widget: draw a table as bars or lines, and turn a table into flashcards.
 - lint: let the tabs of a widget repeat their names.
+- widget: put numbered pins on a picture, tied to the items of a list.
+- widget: write a command from a form, and play a terminal session back.
+- widget: show only the versions of a changelog that come after the reader's.
 - widget: show several slides of a carousel, loop it, scroll it by itself and enlarge its pictures.
 - theme: add a copy button to the code blocks.
 - theme: close the gaps between the lines of a code block that draws boxes.

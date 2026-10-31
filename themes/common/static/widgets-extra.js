@@ -453,9 +453,316 @@
     return true;
   }
 
+  // Numbered pins on a picture, tied to the items of the list that explains them.
+  // The pins are positions in percent of the picture, one for each item, in the order of the list.
+  function annotated(root, id) {
+    var image = root.querySelector("img");
+    var list = root.querySelector("ol, ul");
+    if (!image || !list) return false;
+    var items = Array.prototype.filter.call(list.children, function (item) {
+      return item.tagName === "LI";
+    });
+    var pins = (root.getAttribute("data-pins") || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(function (pin) {
+        return pin.split(",").map(Number);
+      });
+    if (!pins.length || pins.length !== items.length) return false;
+    var holder = image.closest("picture") || image;
+    var stage = make("div", "dkt-pinned");
+    holder.parentNode.insertBefore(stage, holder);
+    stage.appendChild(holder);
+    // A picture is shown as wide as the page allows, and not wider than it is, unless it is drawn
+    // with lines, which has no size of its own.
+    function fit() {
+      if (!/\.svg(\?|$)/i.test(image.currentSrc || image.src) && image.naturalWidth) {
+        stage.style.maxWidth = image.naturalWidth + "px";
+      }
+    }
+    if (image.complete) fit();
+    else image.addEventListener("load", fit);
+    var marks = pins.map(function (at, k) {
+      var mark = make("button", "dkt-pin", String(k + 1));
+      mark.type = "button";
+      mark.style.left = at[0] + "%";
+      mark.style.top = at[1] + "%";
+      mark.setAttribute("aria-label", "Note " + (k + 1) + ": " + items[k].textContent.trim().slice(0, 80));
+      stage.appendChild(mark);
+      return mark;
+    });
+    function light(k, on) {
+      marks[k].classList.toggle("dkt-lit", on);
+      items[k].classList.toggle("dkt-lit", on);
+    }
+    items.forEach(function (item, k) {
+      item.tabIndex = -1;
+      item.addEventListener("mouseenter", function () {
+        light(k, true);
+      });
+      item.addEventListener("mouseleave", function () {
+        light(k, false);
+      });
+      marks[k].addEventListener("mouseenter", function () {
+        light(k, true);
+      });
+      marks[k].addEventListener("mouseleave", function () {
+        light(k, false);
+      });
+      marks[k].addEventListener("focus", function () {
+        light(k, true);
+      });
+      marks[k].addEventListener("blur", function () {
+        light(k, false);
+      });
+      marks[k].addEventListener("click", function () {
+        item.scrollIntoView({ block: "nearest" });
+        item.focus({ preventScroll: true });
+      });
+    });
+    return true;
+  }
+
+  // A form that writes a command or a file: the table gives the fields, the code block the model.
+  // A field with several values is a choice, and a field with one is a text that starts as that value.
+  function builder(root, id) {
+    var grid = root.querySelector("table");
+    var model = root.querySelector("pre code");
+    if (!grid || !grid.tBodies.length || !model) return false;
+    var fields = all(grid.tBodies[0], "tr").map(function (row) {
+      var cells = all(row, "td");
+      return {
+        name: cells[0].textContent.trim(),
+        label: (cells[1] ? cells[1].textContent : cells[0].textContent).trim(),
+        values: (cells[2] ? cells[2].textContent : "")
+          .split(",")
+          .map(function (value) {
+            return value.trim();
+          })
+          .filter(Boolean),
+      };
+    });
+    var template = model.textContent.replace(/\n$/, "");
+    var saved = dkt.load(id) || {};
+    var current = {};
+    var form = make("form", "dkt-form");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+    });
+    var out = make("pre");
+    var code = make("code");
+    out.appendChild(code);
+    function write() {
+      code.textContent = template.replace(/\{([A-Za-z0-9_-]+)\}/g, function (whole, name) {
+        return current[name] !== undefined ? current[name] : whole;
+      });
+      dkt.save(id, current);
+    }
+    fields.forEach(function (field) {
+      var label = make("label", "dkt-field");
+      label.appendChild(make("span", "", field.label));
+      var control;
+      if (field.values.length > 1) {
+        control = make("select");
+        field.values.forEach(function (value) {
+          var option = make("option", "", value);
+          option.value = value;
+          control.appendChild(option);
+        });
+      } else {
+        control = make("input");
+        control.type = "text";
+        control.value = field.values[0] || "";
+      }
+      if (saved[field.name] !== undefined) control.value = saved[field.name];
+      current[field.name] = control.value;
+      control.addEventListener("input", function () {
+        current[field.name] = control.value;
+        write();
+      });
+      label.appendChild(control);
+      form.appendChild(label);
+    });
+    var box = grid.closest(".table-wrap") || grid;
+    box.hidden = true;
+    model.parentNode.hidden = true;
+    root.appendChild(form);
+    root.appendChild(out);
+    write();
+    return true;
+  }
+
+  // A terminal session played back: the lines that start with `$ ` are typed, the others appear.
+  function replay(root, id) {
+    var model = root.querySelector("pre code");
+    if (!model) return false;
+    var script = model.textContent.replace(/\n$/, "").split("\n");
+    var speed = parseFloat(root.getAttribute("data-speed")) || 1;
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var screen = make("pre", "dkt-screen");
+    screen.setAttribute("aria-label", "A terminal session");
+    var text = make("code");
+    var cursor = make("span", "dkt-cursor", "\u258c");
+    screen.appendChild(text);
+    screen.appendChild(cursor);
+    var timer = null;
+    var at = 0;
+    var typing = 0;
+    var running = false;
+    var finished = false;
+    var play = dkt.button("Play", function () {
+      if (finished) restart();
+      else toggle();
+    });
+    var again = dkt.button("Restart", function () {
+      restart();
+    });
+    var bar = make("div", "dkt-controls");
+    bar.appendChild(play);
+    bar.appendChild(again);
+    function label() {
+      play.textContent = finished ? "Replay" : running ? "Pause" : "Play";
+    }
+    function show(all) {
+      text.textContent = script.slice(0, at).join("\n") + (typing ? (at ? "\n" : "") + script[at].slice(0, typing) : "");
+      if (all) text.textContent = script.join("\n");
+    }
+    function stop() {
+      running = false;
+      clearTimeout(timer);
+      label();
+    }
+    function step() {
+      if (!running) return;
+      if (at >= script.length) {
+        finished = true;
+        stop();
+        return;
+      }
+      var line = script[at];
+      if (line.indexOf("$ ") === 0 && typing < line.length) {
+        typing++;
+        show();
+        timer = setTimeout(step, (typing > 2 ? 45 : 400) / speed);
+        return;
+      }
+      typing = 0;
+      at++;
+      show();
+      timer = setTimeout(step, (line.indexOf("$ ") === 0 ? 500 : 110) / speed);
+    }
+    function toggle() {
+      if (running) return stop();
+      running = true;
+      label();
+      step();
+    }
+    function restart() {
+      stop();
+      at = 0;
+      typing = 0;
+      finished = false;
+      text.textContent = "";
+      toggle();
+    }
+    model.parentNode.hidden = true;
+    root.appendChild(screen);
+    root.appendChild(bar);
+    label();
+    if (reduced) {
+      at = script.length;
+      finished = true;
+      show(true);
+      label();
+    } else if ("IntersectionObserver" in window) {
+      var seen = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting && !finished && !running && at === 0) {
+          seen.disconnect();
+          toggle();
+        }
+      });
+      seen.observe(screen);
+    }
+    return true;
+  }
+
+  // The versions that come after the one the reader runs. The headings that start with a version
+  // cut the document, and the sections of the versions that the reader has are left out.
+  function since(root, id) {
+    var version = function (text) {
+      var m = /^\[?v?(\d+(?:\.\d+)*)/.exec(text.trim());
+      return m ? m[1].split(".").map(Number) : null;
+    };
+    var headings = all(root, "h1, h2, h3, h4, h5, h6").filter(function (heading) {
+      return version(heading.textContent);
+    });
+    if (!headings.length) return false;
+    var level = Math.min.apply(
+      null,
+      headings.map(function (heading) {
+        return +heading.tagName.charAt(1);
+      })
+    );
+    var starts = headings.filter(function (heading) {
+      return +heading.tagName.charAt(1) === level;
+    });
+    var sections = starts.map(function (heading) {
+      var nodes = [heading];
+      for (var next = heading.nextElementSibling; next && starts.indexOf(next) < 0; next = next.nextElementSibling) {
+        if (/^H[1-6]$/.test(next.tagName) && +next.tagName.charAt(1) < level) break;
+        nodes.push(next);
+      }
+      return { number: version(heading.textContent), nodes: nodes, text: heading.textContent.trim() };
+    });
+    var newer = function (a, b) {
+      for (var k = 0; k < Math.max(a.length, b.length); k++) {
+        if ((a[k] || 0) !== (b[k] || 0)) return (a[k] || 0) > (b[k] || 0);
+      }
+      return false;
+    };
+    var picker = make("label", "dkt-since");
+    picker.appendChild(document.createTextNode("I run version "));
+    var select = make("select");
+    var every = make("option", "", "any: show everything");
+    every.value = "";
+    select.appendChild(every);
+    sections.forEach(function (section) {
+      var option = make("option", "", section.number.join("."));
+      option.value = section.number.join(".");
+      select.appendChild(option);
+    });
+    picker.appendChild(select);
+    var count = make("span", "dkt-count");
+    count.setAttribute("role", "status");
+    picker.appendChild(count);
+    root.insertBefore(picker, root.firstChild);
+    function apply() {
+      var mine = select.value ? select.value.split(".").map(Number) : null;
+      var shown = 0;
+      sections.forEach(function (section) {
+        var keep = !mine || newer(section.number, mine);
+        section.nodes.forEach(function (node) {
+          node.hidden = !keep;
+        });
+        if (keep) shown++;
+      });
+      count.textContent = mine ? shown + " newer version" + (shown === 1 ? "" : "s") : "";
+      dkt.save(id, select.value);
+    }
+    var saved = dkt.load(id);
+    if (typeof saved === "string") select.value = saved;
+    select.addEventListener("change", apply);
+    apply();
+    return true;
+  }
+
   builders.table = table;
   builders.compare = compare;
   builders.diff = diff;
   builders.chart = chart;
   builders.flashcards = flashcards;
+  builders.annotated = annotated;
+  builders.builder = builder;
+  builders.replay = replay;
+  builders.since = since;
 })();

@@ -56,7 +56,7 @@
     var blocks = document.querySelectorAll("pre");
     Array.prototype.forEach.call(blocks, function (pre) {
       var code = pre.querySelector("code");
-      if (!code || pre.querySelector(".dkt-copy")) return;
+      if (!code || pre.querySelector(".dkt-copy") || pre.classList.contains("dkt-screen")) return;
       var copy = make("button", "dkt-copy", "Copy");
       copy.type = "button";
       copy.setAttribute("aria-label", "Copy the code");
