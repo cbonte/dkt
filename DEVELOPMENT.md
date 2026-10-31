@@ -12,6 +12,9 @@ cargo fmt --check
 `UPDATE_FIXTURES=1 cargo test` rewrites the expected outputs under `tests/fixtures` after an
 intentional change.
 
+`scripts/notice.py` rewrites `NOTICE` from the crates that the binary links.
+`scripts/notice.py --check` exits 1 when `NOTICE` is stale, and runs in the CI.
+
 ## The library
 
 The crate also holds the parser, the block model, the terminal probe, the ANSI writer, GitHub

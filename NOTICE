@@ -3,20 +3,63 @@ Copyright (c) 2026 Cyril Bonté
 
 Third-party software linked into the dkt binary. Each crate keeps its own licence.
 
-| Crates                                                                      | Licence                              |
-| --------------------------------------------------------------------------- | ------------------------------------ |
-| pulldown-cmark, syntect, fancy-regex, bincode                               | MIT                                  |
-| clap, clap_complete, clap_mangen, anyhow, serde, terminal_size, flate2      | MIT or Apache-2.0                    |
-| unicode-width, regex-automata, regex-syntax                                 | MIT or Apache-2.0                    |
-| aho-corasick, memchr                                                        | Unlicense or MIT                     |
-| miniz_oxide                                                                 | MIT or Zlib or Apache-2.0            |
-| adler2                                                                      | 0BSD or MIT or Apache-2.0            |
-| unicode-ident                                                               | (MIT or Apache-2.0) and Unicode-3.0  |
-| minijinja                                                                   | Apache-2.0                           |
-| toml, toml_datetime, toml_parser, serde_spanned, indexmap, hashbrown        | MIT or Apache-2.0                    |
-| winnow                                                                      | MIT                                  |
+| Crate                 | Licence                                             |
+| --------------------- | --------------------------------------------------- |
+| adler2                | 0BSD or MIT or Apache-2.0                           |
+| aho-corasick          | Unlicense or MIT                                    |
+| anstream              | MIT or Apache-2.0                                   |
+| anstyle               | MIT or Apache-2.0                                   |
+| anstyle-parse         | MIT or Apache-2.0                                   |
+| anstyle-query         | MIT or Apache-2.0                                   |
+| anyhow                | MIT or Apache-2.0                                   |
+| bincode               | MIT                                                 |
+| bit-set               | Apache-2.0 or MIT                                   |
+| bit-vec               | Apache-2.0 or MIT                                   |
+| bitflags              | MIT or Apache-2.0                                   |
+| cfg-if                | MIT or Apache-2.0                                   |
+| clap                  | MIT or Apache-2.0                                   |
+| clap_builder          | MIT or Apache-2.0                                   |
+| clap_complete         | MIT or Apache-2.0                                   |
+| clap_lex              | MIT or Apache-2.0                                   |
+| clap_mangen           | MIT or Apache-2.0                                   |
+| colorchoice           | MIT or Apache-2.0                                   |
+| crc32fast             | MIT or Apache-2.0                                   |
+| fancy-regex           | MIT                                                 |
+| flate2                | MIT or Apache-2.0                                   |
+| fnv                   | Apache-2.0 or MIT                                   |
+| is_terminal_polyfill  | MIT or Apache-2.0                                   |
+| linux-raw-sys         | Apache-2.0 WITH LLVM-exception or Apache-2.0 or MIT |
+| memchr                | Unlicense or MIT                                    |
+| memo-map              | Apache-2.0                                          |
+| minijinja             | Apache-2.0                                          |
+| miniz_oxide           | MIT or Zlib or Apache-2.0                           |
+| once_cell             | MIT or Apache-2.0                                   |
+| pulldown-cmark        | MIT                                                 |
+| pulldown-cmark-escape | MIT                                                 |
+| regex-automata        | MIT or Apache-2.0                                   |
+| regex-syntax          | MIT or Apache-2.0                                   |
+| roff                  | MIT or Apache-2.0                                   |
+| rustix                | Apache-2.0 WITH LLVM-exception or Apache-2.0 or MIT |
+| same-file             | Unlicense or MIT                                    |
+| serde                 | MIT or Apache-2.0                                   |
+| serde_core            | MIT or Apache-2.0                                   |
+| serde_spanned         | MIT or Apache-2.0                                   |
+| simd-adler32          | MIT                                                 |
+| strsim                | MIT                                                 |
+| syntect               | MIT                                                 |
+| terminal_size         | MIT or Apache-2.0                                   |
+| thiserror             | MIT or Apache-2.0                                   |
+| toml                  | MIT or Apache-2.0                                   |
+| toml_datetime         | MIT or Apache-2.0                                   |
+| toml_parser           | MIT or Apache-2.0                                   |
+| toml_writer           | MIT or Apache-2.0                                   |
+| unicase               | MIT or Apache-2.0                                   |
+| unicode-width         | MIT or Apache-2.0                                   |
+| utf8parse             | Apache-2.0 or MIT                                   |
+| walkdir               | Unlicense or MIT                                    |
+| winnow                | MIT                                                 |
 
-The complete list, with versions, comes from `cargo tree` and Cargo.lock.
+The complete list, with versions, comes from Cargo.lock.
 
-syntect embeds the syntax definitions and colour themes it ships with its default
-features. They remain under the terms published in the syntect repository.
+syntect embeds the syntax definitions and colour themes it ships with its default features.
+They remain under the terms published in the syntect repository.
