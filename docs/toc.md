@@ -26,5 +26,5 @@ Without those markers, `dkt toc` prints the table alone so you can paste it.
 | `--write`       | off     | update the files in place                                |
 | `--check`       | off     | print the stale files and exit 1                         |
 
-Anchors are the ones GitHub computes, duplicates numbered the same way, so the links work on
-GitHub and with `dkt cat --section`.
+Anchors are the ones GitHub computes, duplicates numbered the same way, so the links work on GitHub
+and with `dkt cat --section`.

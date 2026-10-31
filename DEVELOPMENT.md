@@ -15,9 +15,9 @@ intentional change.
 ## The library
 
 The crate also holds the parser, the block model, the terminal probe, the ANSI writer, GitHub
-anchors, and a ranged syntax tree that keeps the byte range of every construct for the commands
-that rewrite or locate Markdown rather than render it. Each other format is a converter to
-Markdown, in `src/rst` and in `src/haproxy`, chosen by `src/format.rs`.
+anchors, and a ranged syntax tree that keeps the byte range of every construct for the commands that
+rewrite or locate Markdown rather than render it. Each other format is a converter to Markdown, in
+`src/rst` and in `src/haproxy`, chosen by `src/format.rs`.
 
 ## What the tests hold
 
@@ -33,3 +33,8 @@ heading, and that no heading repeats.
 ```
 HAPROXY_REPO=../haproxy cargo test --test haproxy_docs
 ```
+
+## Rendering to HTML
+
+`dkt::page::render` returns the page for a document, and takes an optional function that sees the
+target of every link and image, to point a `.md` link at the page it becomes.

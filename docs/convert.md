@@ -9,11 +9,11 @@ dkt convert --format haproxy configuration.txt --width 80
 dkt convert --format rst < api.txt
 ```
 
-| Option           | Default           | Effect                                                    |
-| ---------------- | ----------------- | --------------------------------------------------------- |
+| Option           | Default            | Effect                                                    |
+| ---------------- | ------------------ | --------------------------------------------------------- |
 | `--format NAME`  | from the extension | `markdown`, `rst` or `haproxy`                            |
-| `--output`, `-o` | stdout            | write to a file                                           |
-| `--width N`      | none              | wrap the prose at N columns, 0 for one line per paragraph |
+| `--output`, `-o` | stdout             | write to a file                                           |
+| `--width N`      | none               | wrap the prose at N columns, 0 for one line per paragraph |
 
 The format comes from the extension, `.md` giving Markdown and `.rst` giving reStructuredText, and
 it is Markdown for the standard input. A file with any other extension, a `.txt` file included,
