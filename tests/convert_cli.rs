@@ -63,3 +63,35 @@ fn the_extension_gives_the_format_and_an_unknown_one_is_an_error() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("from its extension"));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn an_included_file_takes_the_place_of_its_directive() {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("rst-include");
+    std::fs::create_dir_all(dir.join("part")).expect("create dir");
+    std::fs::write(
+        dir.join("main.rst"),
+        "Doc\n===\n\nBefore.\n\n.. include:: part/inner.txt\n\nAfter.\n\n* item\n\n  .. include:: part/inner.txt\n     :start-after: START\n\n.. include:: missing.txt\n",
+    )
+    .expect("write main");
+    std::fs::write(
+        dir.join("part/inner.txt"),
+        "Included text with ``code``.\n\n.. include:: deeper.txt\n\nSTART\nOnly this.\n",
+    )
+    .expect("write inner");
+    std::fs::write(dir.join("part/deeper.txt"), "From deeper.\n").expect("write deeper");
+    let out = Command::new(env!("CARGO_BIN_EXE_dkt"))
+        .arg("convert")
+        .arg(dir.join("main.rst"))
+        .output()
+        .expect("run dkt convert");
+    let text = String::from_utf8(out.stdout).expect("utf-8");
+    assert!(
+        text.contains(
+            "Before.\n\nIncluded text with `code`.\n\nFrom deeper.\n\nSTART Only this.\n\nAfter."
+        ),
+        "{text}"
+    );
+    assert!(text.contains("- item\n\n  Only this."), "{text}");
+    assert!(text.contains(".. include:: missing.txt"), "{text}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -2,9 +2,18 @@
 
 ## Added
 
+- rst: read tables, definition lists, line blocks, footnotes and substitutions.
+- rst: read the files that an include directive names, and the entries of a toctree.
+- rst: read list and csv tables, version notes, topics, rubrics, math, option lists and doctests.
+- rst: read named and anonymous references, and the common inline roles.
 - widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
 - theme: add a copy button to the code blocks.
 - lint: report a widget that is unknown, nested or never closed.
+
+## Fixed
+
+- rst: read the address of a target, which was cut at its last colon.
+- rst: read a directive with a space before its colons, as in note ::.
 
 ## Changed
 

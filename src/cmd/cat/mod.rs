@@ -60,7 +60,7 @@ fn render_one(
         out.write_all(text.as_bytes())?;
         return Ok(());
     };
-    let text = format.markdown(&text);
+    let text = format.markdown_in(&text, path.parent());
     let doc = crate::document(&text, opts);
     if cli.toc {
         return crate::render_outline(&doc, cli.toc_depth, opts, out);

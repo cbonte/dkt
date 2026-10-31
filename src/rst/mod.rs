@@ -1,13 +1,16 @@
 //! Converts reStructuredText, as Sphinx documents are written, into Markdown.
 //!
-//! The text is read as blocks: sections, paragraphs, lists, literal blocks, field lists, the notes
-//! and warnings, the images and the objects that the `js` domain documents with `js:function`,
-//! `js:class` and `js:attribute`. What is not understood stays as preformatted text, so the
+//! The text is read as blocks: sections, paragraphs, lists, definition lists, tables, line blocks,
+//! literal blocks, field and option lists, footnotes, substitutions, the notes and warnings, the
+//! images, the included files and the objects that a domain documents, such as `js:function`.
+//! A directive that has no meaning for a reader of Markdown stays as preformatted text, so the
 //! conversion does not lose a line.
 
 pub mod blocks;
+pub mod include;
 pub mod inline;
 pub mod render;
+pub mod tables;
 
 /// The result of a conversion.
 pub struct Converted {
@@ -18,6 +21,19 @@ pub struct Converted {
 
 /// Converts a reStructuredText document to Markdown.
 pub fn convert(source: &str) -> Converted {
+    convert_in(source, None)
+}
+
+/// Converts a document to Markdown, the files that it includes being looked for in `dir`.
+pub fn convert_in(source: &str, dir: Option<&std::path::Path>) -> Converted {
+    let expanded;
+    let source = match dir {
+        Some(dir) => {
+            expanded = include::expand(source, dir);
+            expanded.as_str()
+        }
+        None => source,
+    };
     let lines = blocks::lines(source);
     let mut parsed = blocks::parse(&lines);
     let title = blocks::promote_title(&mut parsed);
@@ -109,5 +125,177 @@ mod tests {
         let out = md(".. unknown-thing:: arg\n   :opt: 1\n\n   body\n");
         assert!(out.contains("```text\n.. unknown-thing:: arg"), "{out}");
         assert!(out.contains("body"), "{out}");
+    }
+
+    #[test]
+    fn a_grid_table_is_a_table_with_its_header() {
+        let out = md(
+            "+-------+-------+\n| Name  | Value |\n+=======+=======+\n| a     | 1     |\n+-------+-------+\n| b     | 2 `x` |\n+-------+-------+\n",
+        );
+        assert!(
+            out.contains("| Name | Value |\n| --- | --- |\n| a | 1 |\n| b | 2 `x` |"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_grid_cell_that_spans_columns_keeps_its_text() {
+        let out = md("+-----+-----+\n| a   | b   |\n+=====+=====+\n| both      |\n+-----+-----+\n");
+        assert!(out.contains("| both |  |"), "{out}");
+    }
+
+    #[test]
+    fn a_simple_table_keeps_its_rows_and_the_lines_that_go_on() {
+        let out = md(
+            "=====  ======\nName   Value\n=====  ======\nfirst  1\n       more\nsecond 2\n=====  ======\n",
+        );
+        assert!(out.contains("| Name | Value |\n| --- | --- |"), "{out}");
+        assert!(
+            out.contains("| first | 1<br>more |") || out.contains("| first | 1 more |"),
+            "{out}"
+        );
+        assert!(out.contains("| second | 2 |"), "{out}");
+    }
+
+    #[test]
+    fn a_table_with_no_header_uses_its_first_row() {
+        let out = md("=====  =====\none    two\nthree  four\n=====  =====\n");
+        assert!(
+            out.contains("| one | two |\n| --- | --- |\n| three | four |"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn list_tables_and_csv_tables_are_tables() {
+        let out = md(
+            ".. list-table:: Sizes\n   :header-rows: 1\n\n   * - Name\n     - Size\n   * - a\n     - 1\n\n.. csv-table::\n   :header: \"x\", \"y\"\n\n   1, \"2, 3\"\n",
+        );
+        assert!(
+            out.contains("**Sizes**\n\n| Name | Size |\n| --- | --- |\n| a | 1 |"),
+            "{out}"
+        );
+        assert!(
+            out.contains("| x | y |\n| --- | --- |\n| 1 | 2, 3 |"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_pipe_in_a_cell_is_escaped() {
+        let out = md("=====  =====\nA      B\n=====  =====\n``a|b``  x\n=====  =====\n");
+        assert!(out.contains("`a\\|b`"), "{out}");
+    }
+
+    #[test]
+    fn definition_lists_keep_terms_and_definitions() {
+        let out = md("term one\n    Its meaning.\n\n    More.\n\nterm two : kind\n    Other.\n");
+        assert!(
+            out.contains("- **term one**\n\n  Its meaning.\n\n  More."),
+            "{out}"
+        );
+        assert!(out.contains("- **term two** (*kind*)\n\n  Other."), "{out}");
+    }
+
+    #[test]
+    fn a_line_block_keeps_its_breaks() {
+        let out = md("| first\n|   indented\n| third\n");
+        assert_eq!(out.trim_end(), "first\\\n&nbsp;&nbsp;indented\\\nthird");
+    }
+
+    #[test]
+    fn footnotes_are_numbered_and_linked() {
+        let out = md(
+            "Text [1]_ and [#]_ and [#named]_ and [CIT2002]_.\n\n.. [1] One.\n.. [#] Auto.\n.. [#named] Named\n   goes on.\n.. [CIT2002] A citation.\n",
+        );
+        assert!(
+            out.contains("[^1] and [^2] and [^3] and [^cite-cit2002]"),
+            "{out}"
+        );
+        assert!(out.contains("[^1]: One."), "{out}");
+        assert!(out.contains("[^2]: Auto."), "{out}");
+        assert!(out.contains("[^3]: Named goes on."), "{out}");
+        assert!(out.contains("[^cite-cit2002]: A citation."), "{out}");
+    }
+
+    #[test]
+    fn substitutions_stand_for_their_text() {
+        let out = md(
+            "The |project| is |logo| |copy|.\n\n.. |project| replace:: **dkt** tool\n.. |logo| image:: img/logo.png\n   :alt: Logo\n.. |copy| unicode:: U+00A9\n",
+        );
+        assert!(
+            out.contains("The **dkt** tool is ![Logo](img/logo.png) \u{a9}."),
+            "{out}"
+        );
+        assert!(!out.contains(".. |"), "{out}");
+    }
+
+    #[test]
+    fn named_and_anonymous_references_lead_to_their_targets() {
+        let out = md(
+            "See Python_, `the docs`__ and `a page <https://a.test/>`__.\n\n.. _Python: https://python.org\n.. __: https://docs.test/\n",
+        );
+        assert!(out.contains("[Python](https://python.org)"), "{out}");
+        assert!(out.contains("[the docs](https://docs.test/)"), "{out}");
+        assert!(out.contains("[a page](https://a.test/)"), "{out}");
+    }
+
+    #[test]
+    fn option_lists_and_transitions_and_doctests() {
+        let out = md(
+            "-a             Everything.\n--output=FILE  Where to write\n               to.\n\n----------\n\n>>> print(1)\n1\n",
+        );
+        assert!(
+            out.contains("- `-a`: Everything.\n- `--output=FILE`: Where to write to."),
+            "{out}"
+        );
+        assert!(out.contains("\n---\n"), "{out}");
+        assert!(out.contains("```pycon\n>>> print(1)\n1\n```"), "{out}");
+    }
+
+    #[test]
+    fn version_notes_topics_and_the_like_keep_their_text() {
+        let out = md(
+            ".. versionadded:: 2.1\n   Now it can.\n\n.. deprecated:: 3.0 use other\n\n.. rubric:: A rubric\n\n.. topic:: Title\n\n   Body.\n\n.. math::\n\n   a^2 + b^2\n",
+        );
+        assert!(
+            out.contains("> [!NOTE]\n> **New in version 2.1.**\n>\n> Now it can."),
+            "{out}"
+        );
+        assert!(
+            out.contains("> [!WARNING]\n> **Deprecated since version 3.0.** use other"),
+            "{out}"
+        );
+        assert!(out.contains("**A rubric**"), "{out}");
+        assert!(out.contains("> **Title**\n>\n> Body."), "{out}");
+        assert!(out.contains("```math\na^2 + b^2\n```"), "{out}");
+    }
+
+    #[test]
+    fn more_roles_and_numbers_between_parentheses() {
+        let out = md(
+            "Press :kbd:`Ctrl+C`, x\\ :sup:`2`, :math:`a+b` and :guilabel:`OK`.\n\n(1) one\n(2) two\n",
+        );
+        assert!(out.contains("<kbd>Ctrl+C</kbd>"), "{out}");
+        assert!(
+            out.contains("<sup>2</sup>") && out.contains("$`a+b`$") && out.contains("**OK**"),
+            "{out}"
+        );
+        assert!(out.contains("1. one\n2. two"), "{out}");
+    }
+
+    #[test]
+    fn a_toctree_lists_its_entries_unless_it_is_hidden() {
+        let out = md(
+            ".. toctree::\n   :maxdepth: 1\n\n   intro\n   guide/start\n   The tour <tour>\n\n.. toctree::\n   :hidden:\n\n   secret\n",
+        );
+        assert!(out.contains("- intro\n- start\n- The tour"), "{out}");
+        assert!(!out.contains("secret"), "{out}");
+    }
+
+    #[test]
+    fn a_space_may_come_before_the_colons_of_a_directive() {
+        let out = md(".. note ::\n   Careful.\n");
+        assert!(out.contains("> [!NOTE]\n> Careful."), "{out}");
     }
 }

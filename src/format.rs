@@ -1,6 +1,8 @@
 //! The formats a document can be written in. Each one is read as Markdown, so that everything that
 //! renders Markdown renders them.
 
+use std::path::Path;
+
 use anyhow::{Result, bail};
 
 /// How a document is written.
@@ -39,10 +41,15 @@ impl Format {
 
     /// The Markdown of a text written in this format.
     pub fn markdown(self, text: &str) -> String {
+        self.markdown_in(text, None)
+    }
+
+    /// The Markdown of a text read from a file in `dir`, which the files it includes are found in.
+    pub fn markdown_in(self, text: &str, dir: Option<&Path>) -> String {
         match self {
             Format::Markdown => text.to_string(),
             Format::Haproxy => crate::haproxy::convert(text).markdown,
-            Format::Rst => crate::rst::convert(text).markdown,
+            Format::Rst => crate::rst::convert_in(text, dir).markdown,
         }
     }
 }

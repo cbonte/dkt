@@ -1,6 +1,9 @@
 //! The inline markup of reStructuredText, as Markdown.
 
+use std::cell::Cell;
 use std::collections::HashMap;
+
+use super::blocks::Substitute;
 
 /// What the references of a document lead to.
 #[derive(Default)]
@@ -15,7 +18,25 @@ pub struct Refs {
     pub objects: HashMap<String, String>,
     /// The addresses that names were given, in lower case.
     pub urls: HashMap<String, String>,
+    /// The addresses of the anonymous targets, in order, and how many were used.
+    pub anonymous: Vec<String>,
+    pub anonymous_used: Cell<usize>,
+    /// The footnotes that a label names, and the citations, by label in lower case.
+    pub notes: HashMap<String, String>,
+    /// The numbers given to the footnotes with `#`, and to the ones with `*`, in order.
+    pub auto_notes: Vec<String>,
+    pub auto_used: Cell<usize>,
+    pub symbol_notes: Vec<String>,
+    pub symbol_used: Cell<usize>,
+    /// The id of each footnote definition, in order, and how many were written.
+    pub definitions: Vec<String>,
+    pub definitions_written: Cell<usize>,
+    /// What the substitutions stand for.
+    pub substitutions: HashMap<String, Substitute>,
 }
+
+/// How deep a substitution may hold another one.
+const SUBSTITUTION_DEPTH: usize = 4;
 
 /// The text of some inline markup without the markup: what a title is named by.
 pub fn plain(text: &str) -> String {
@@ -134,6 +155,12 @@ fn role(name: &str, content: &str, refs: &Refs) -> String {
                 None => code(shown),
             }
         }
+        "sup" => format!("<sup>{}</sup>", inline_plain(content)),
+        "sub" => format!("<sub>{}</sub>", inline_plain(content)),
+        "kbd" => format!("<kbd>{}</kbd>", inline_plain(content)),
+        "math" => format!("$`{content}`$"),
+        "abbr" => inline_plain(content.split(" (").next().unwrap_or(content).trim()),
+        "guilabel" | "menuselection" | "strong-ref" => format!("**{}**", inline_plain(content)),
         "emphasis" => format!("*{}*", inline_plain(content)),
         "strong" => format!("**{}**", inline_plain(content)),
         _ => code(content),
@@ -157,6 +184,64 @@ fn inline_plain(text: &str) -> String {
 
 /// The inline markup of a text as Markdown.
 pub fn inline(text: &str, refs: &Refs) -> String {
+    inline_at(text, refs, 0)
+}
+
+/// The id that a footnote reference leads to, `[1]_`, `[#]_`, `[#name]_`, `[*]_` or `[label]_`.
+fn note_id(label: &str, refs: &Refs) -> Option<String> {
+    let next = |ids: &Vec<String>, used: &Cell<usize>| {
+        let id = ids.get(used.get()).cloned();
+        used.set(used.get() + 1);
+        id
+    };
+    match label {
+        "#" => next(&refs.auto_notes, &refs.auto_used),
+        "*" => next(&refs.symbol_notes, &refs.symbol_used),
+        l if l.chars().all(|c| c.is_ascii_digit()) => Some(l.to_string()),
+        l => refs
+            .notes
+            .get(&l.trim_start_matches('#').to_lowercase())
+            .cloned(),
+    }
+}
+
+/// A reference of one word followed by an underscore, such as `Python_`, when its name is known.
+fn simple_reference(chars: &[char], i: usize, refs: &Refs) -> Option<(String, usize)> {
+    let mut end = i;
+    while end < chars.len()
+        && (chars[end].is_alphanumeric()
+            || ("-.+:_".contains(chars[end])
+                && chars.get(end + 1).is_some_and(|c| c.is_alphanumeric())))
+    {
+        end += 1;
+    }
+    if end == i || chars.get(end) != Some(&'_') {
+        return None;
+    }
+    let mut next = end + 1;
+    let anonymous = chars.get(next) == Some(&'_');
+    if anonymous {
+        next += 1;
+    }
+    if chars.get(next).is_some_and(|c| c.is_alphanumeric()) {
+        return None;
+    }
+    let name: String = chars[i..end].iter().collect();
+    let key = name.to_lowercase();
+    let text = inline_plain(&name);
+    if anonymous {
+        let url = refs.anonymous.get(refs.anonymous_used.get())?;
+        refs.anonymous_used.set(refs.anonymous_used.get() + 1);
+        return Some((format!("[{text}]({url})"), next));
+    }
+    if let Some(url) = refs.urls.get(&key) {
+        return Some((format!("[{text}]({url})"), next));
+    }
+    let anchor = refs.titles.get(&key).or_else(|| refs.labels.get(&key))?;
+    Some((format!("[{text}](#{anchor})"), next))
+}
+
+fn inline_at(text: &str, refs: &Refs, depth: usize) -> String {
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
     let word = |x: Option<char>| x.is_some_and(char::is_alphanumeric);
@@ -169,6 +254,45 @@ pub fn inline(text: &str, refs: &Refs) -> String {
         if c == '\\' && i + 1 < n {
             escaped(chars[i + 1], None, None, &mut out);
             i += 2;
+            continue;
+        }
+        if c == '['
+            && !word(before)
+            && let Some(close) = find(&chars, i + 1, "]")
+            && close > i + 1
+            && chars.get(close + 1) == Some(&'_')
+            && !word(chars.get(close + 2).copied())
+            && let Some(id) = note_id(&chars[i + 1..close].iter().collect::<String>(), refs)
+        {
+            out.push_str(&format!("[^{id}]"));
+            i = close + 2;
+            continue;
+        }
+        if c == '|'
+            && !word(before)
+            && after.is_some_and(|a| !a.is_whitespace())
+            && let Some(close) = find(&chars, i + 1, "|")
+            && close > i + 1
+            && !chars[close - 1].is_whitespace()
+            && depth < SUBSTITUTION_DEPTH
+            && let Some(value) = refs
+                .substitutions
+                .get(&chars[i + 1..close].iter().collect::<String>())
+        {
+            match value {
+                Substitute::Text(text) => out.push_str(&inline_at(text, refs, depth + 1)),
+                Substitute::Image { src, alt } => out.push_str(&format!("![{alt}]({src})")),
+                Substitute::Chars(text) => out.push_str(&inline_plain(text)),
+            }
+            i = close + 1;
+            continue;
+        }
+        if c.is_alphanumeric()
+            && !word(before)
+            && let Some((link, next)) = simple_reference(&chars, i, refs)
+        {
+            out.push_str(&link);
+            i = next;
             continue;
         }
         if c == '`'
@@ -202,10 +326,15 @@ pub fn inline(text: &str, refs: &Refs) -> String {
             let mut next = end + 1;
             if chars.get(next) == Some(&'_') {
                 next += 1;
-                if chars.get(next) == Some(&'_') {
+                let anonymous = chars.get(next) == Some(&'_');
+                if anonymous {
                     next += 1;
                 }
-                out.push_str(&reference(&content, refs));
+                out.push_str(&if anonymous {
+                    anonymous_reference(&content, refs)
+                } else {
+                    reference(&content, refs)
+                });
             } else {
                 out.push_str(&code(&content));
             }
@@ -262,6 +391,25 @@ pub fn inline(text: &str, refs: &Refs) -> String {
         i += 1;
     }
     out
+}
+
+/// A reference in backticks and 2 underscores, which leads to its own address or to the next
+/// anonymous target.
+fn anonymous_reference(content: &str, refs: &Refs) -> String {
+    if let Some((text, url)) = content
+        .rsplit_once(" <")
+        .and_then(|(t, l)| l.strip_suffix('>').map(|l| (t, l)))
+    {
+        return format!("[{}]({url})", inline_plain(text.trim()));
+    }
+    let text = inline_plain(content.trim());
+    match refs.anonymous.get(refs.anonymous_used.get()) {
+        Some(url) => {
+            refs.anonymous_used.set(refs.anonymous_used.get() + 1);
+            format!("[{text}]({url})")
+        }
+        None => text,
+    }
 }
 
 /// A reference in backticks and an underscore: `` `text <address>`_ `` or `` `name`_ ``.

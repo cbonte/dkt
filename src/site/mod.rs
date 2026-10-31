@@ -204,9 +204,9 @@ fn after_lede(content: &str) -> String {
 
 /// The Markdown of a document: the file itself, or the conversion of a text that is not Markdown.
 fn read_document(root: &Path, entry: &Entry) -> Result<String> {
-    let text = fs::read_to_string(root.join(&entry.src))
-        .with_context(|| format!("cannot read {}", entry.src))?;
-    let markdown = entry.format.markdown(&text);
+    let path = root.join(&entry.src);
+    let text = fs::read_to_string(&path).with_context(|| format!("cannot read {}", entry.src))?;
+    let markdown = entry.format.markdown_in(&text, path.parent());
     Ok(match &entry.title {
         Some(title) => with_title(&markdown, title),
         None => markdown,

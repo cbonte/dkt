@@ -67,7 +67,12 @@ pub fn render(args: &Args, text: &str) -> Result<String> {
         (named, Some(name)) => Format::of(named.as_deref(), name)?,
         (Some(named), None) => Format::of(Some(named), "the input")?,
     };
-    let markdown = format.markdown(text);
+    let dir = args
+        .file
+        .as_deref()
+        .filter(|p| p.as_os_str() != "-")
+        .and_then(|p| p.parent());
+    let markdown = format.markdown_in(text, dir);
     let page = page::render(&markdown, None);
     let Some(template) = &args.template else {
         if !args.set.is_empty() {
