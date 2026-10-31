@@ -275,7 +275,7 @@ fn the_terminal_example_of_the_site_is_what_cat_writes() {
         .args([
             "cat",
             "--color",
-            "never",
+            "always",
             "--width",
             "72",
             "--borders",

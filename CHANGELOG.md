@@ -8,6 +8,7 @@
 - rst: read named and anonymous references, and the common inline roles.
 - site: show examples of formats, themes, widgets and terminal output in a section.
 - widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
+- html: draw the ansi blocks with the colours of the terminal.
 - html: draw Mermaid blocks as SVG figures, and pie charts as pies.
 - widget: group tabs, so that a choice made in one tab set is made in the others.
 - widget: filter and sort a table, compare 2 pictures with a slider and read a diff in 2 sides.

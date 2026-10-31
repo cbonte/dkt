@@ -35,3 +35,47 @@ blockquote.markdown-alert-caution::before { content: "Caution"; }
 
 /* A code block that draws with box characters, whose lines have to touch. */
 html pre.box, html pre.box code { line-height: 1.15; font-variant-ligatures: none; }
+
+/* Text with the colours of a terminal, on the dark ground of a terminal in both appearances. */
+html pre.ansi { --a0: #8b93a1; --a1: #f87171; --a2: #4ade80; --a3: #fbbf24; --a4: #60a5fa; --a5: #c084fc; --a6: #22d3ee; --a7: #cbd5e1;
+  --a8: #9aa3b2; --a9: #fca5a5; --a10: #86efac; --a11: #fde68a; --a12: #93c5fd; --a13: #d8b4fe; --a14: #67e8f9; --a15: #f8fafc;
+  color: #e8ecf6; background: #0b1020; border-color: transparent; }
+html pre.ansi code { color: inherit; background: none; }
+.a-b { font-weight: 700; }
+.a-d { opacity: .7; }
+.a-i { font-style: italic; }
+.a-u { text-decoration: underline; }
+.a-s { text-decoration: line-through; }
+.a-r { color: #0b1020; background: #e8ecf6; }
+.a-fg0 { color: var(--a0); }
+.a-bg0 { background: var(--a0); }
+.a-fg1 { color: var(--a1); }
+.a-bg1 { background: var(--a1); }
+.a-fg2 { color: var(--a2); }
+.a-bg2 { background: var(--a2); }
+.a-fg3 { color: var(--a3); }
+.a-bg3 { background: var(--a3); }
+.a-fg4 { color: var(--a4); }
+.a-bg4 { background: var(--a4); }
+.a-fg5 { color: var(--a5); }
+.a-bg5 { background: var(--a5); }
+.a-fg6 { color: var(--a6); }
+.a-bg6 { background: var(--a6); }
+.a-fg7 { color: var(--a7); }
+.a-bg7 { background: var(--a7); }
+.a-fg8 { color: var(--a8); }
+.a-bg8 { background: var(--a8); }
+.a-fg9 { color: var(--a9); }
+.a-bg9 { background: var(--a9); }
+.a-fg10 { color: var(--a10); }
+.a-bg10 { background: var(--a10); }
+.a-fg11 { color: var(--a11); }
+.a-bg11 { background: var(--a11); }
+.a-fg12 { color: var(--a12); }
+.a-bg12 { background: var(--a12); }
+.a-fg13 { color: var(--a13); }
+.a-bg13 { background: var(--a13); }
+.a-fg14 { color: var(--a14); }
+.a-bg14 { background: var(--a14); }
+.a-fg15 { color: var(--a15); }
+.a-bg15 { background: var(--a15); }

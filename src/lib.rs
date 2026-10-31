@@ -2,6 +2,7 @@
 
 pub mod annotation;
 pub mod ansi;
+pub mod ansi_html;
 pub mod cli_extras;
 pub mod cmd;
 pub mod diagram;

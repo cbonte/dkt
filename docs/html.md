@@ -90,6 +90,12 @@ A fenced block whose language is `mermaid` is drawn as an SVG figure too, with t
 diagram or an entity-relationship diagram. A pie chart is drawn as a pie with a legend. A block that
 is not drawn stays a code block.
 
+A fenced block whose language is `ansi` holds text with the escape sequences of a terminal, such as
+the output of `dkt cat --color always`. It is drawn on the dark ground of a terminal, with the 16
+colours, the 256 colours and the true colours, bold, dim, italic, underlined and struck text. GitHub
+draws such a block the same way. The sequences that are not about the look of the text, such as the
+ones that move the cursor, are dropped.
+
 ## Annotations
 
 A document can carry notes for the site in HTML comments, which GitHub does not show. A comment is

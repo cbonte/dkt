@@ -34,36 +34,35 @@ graph LR
 ```
 ~~~
 
-Run with `dkt cat --color never --width 72 --borders unicode examples/terminal/sample.md`, it writes
-this. A terminal adds the colours, the syntax highlighting of the code and the links.
+Run with `dkt cat --color always --width 72 --borders unicode examples/terminal/sample.md`, it writes this. The block holds the escape sequences of the terminal, and the site draws their colours. A terminal adds the links, and a pager keeps the colours with `less -R`.
 
-```text
-# Release notes
+```ansi
+[0;2m# [0;1;4;38;2;85;85;255mRelease notes[0m
 
 A short document, read in the terminal.
 
-│ TIP
-│
-│ Pipe the output to a pager with dkt cat -p.
+[0;38;2;85;255;85m│ [0;1;38;2;85;255;85mTIP[0m
+[0;38;2;85;255;85m│[0m
+[0;38;2;85;255;85m│ [0mPipe the output to a pager with [0;38;2;255;255;85mdkt cat -p[0m.
 
-┌─────────┬─────────┐
-│ Step    │ State   │
-├─────────┼─────────┤
-│ build   │ done    │
-├─────────┼─────────┤
-│ publish │ pending │
-└─────────┴─────────┘
+[0;38;2;85;85;85m┌─────────┬─────────┐[0m
+[0;38;2;85;85;85m│ [0;1mStep[0m   [0;38;2;85;85;85m │ [0;1mState[0m  [0;38;2;85;85;85m │[0m
+[0;38;2;85;85;85m├─────────┼─────────┤[0m
+[0;38;2;85;85;85m│ [0mbuild  [0;38;2;85;85;85m │ [0mdone   [0;38;2;85;85;85m │[0m
+[0;38;2;85;85;85m├─────────┼─────────┤[0m
+[0;38;2;85;85;85m│ [0mpublish[0;38;2;85;85;85m │ [0mpending[0;38;2;85;85;85m │[0m
+[0;38;2;85;85;85m└─────────┴─────────┘[0m
 
-• [✓] Write the notes
-• [ ] Tag the release
+[0;38;2;85;85;255m• [0;38;2;85;255;85m[✓] [0mWrite the notes
+[0;38;2;85;85;255m• [ ] [0mTag the release
 
-  fn main() {
-      println!("hello");
-  }
+  [0;38;2;180;142;173mfn[0;38;2;192;197;206m [0;38;2;143;161;179mmain[0;38;2;192;197;206m() {[0m
+  [0;38;2;192;197;206m    println!("[0;38;2;163;190;140mhello[0;38;2;192;197;206m");[0m
+  [0;38;2;192;197;206m}[0m
 
-  ┌───────┐     ┌───────┐     ┌─────────┐
-  │ Write ├────►│ Check ├────►│ Publish │
-  └───────┘     └───────┘     └─────────┘
+  [0;38;2;85;85;85m┌───────┐[0m     [0;38;2;85;85;85m┌───────┐[0m     [0;38;2;85;85;85m┌─────────┐[0m
+  [0;38;2;85;85;85m│[0m Write [0;38;2;85;85;85m├────►│[0m Check [0;38;2;85;85;85m├────►│[0m Publish [0;38;2;85;85;85m│[0m
+  [0;38;2;85;85;85m└───────┘[0m     [0;38;2;85;85;85m└───────┘[0m     [0;38;2;85;85;85m└─────────┘[0m
 ```
 
 A Mermaid block is drawn with box characters, as above, for flowcharts, sequence diagrams, state

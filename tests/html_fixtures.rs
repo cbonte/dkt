@@ -222,3 +222,15 @@ fn a_mermaid_block_is_drawn_as_an_svg_figure() {
         "{c}"
     );
 }
+
+#[test]
+fn an_ansi_block_keeps_its_colours() {
+    let page = page::render("```ansi\n\u{1b}[1;32mok\u{1b}[0m <done>\n```\n", None);
+    assert!(
+        page.content.contains(
+            "<pre class=\"ansi\"><code class=\"language-ansi\"><span class=\"a-b a-fg2\">ok</span> &lt;done&gt;\n</code></pre>"
+        ),
+        "{}",
+        page.content
+    );
+}

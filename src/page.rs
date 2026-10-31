@@ -343,9 +343,10 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                 )));
                 i += 1;
             }
-            // A block that draws with box characters is marked, so that a theme can close the gaps
-            // between its lines.
-            Event::Start(Tag::CodeBlock(kind)) if draws_boxes(&events, i) => {
+            // Text with the escape sequences of a terminal keeps its colours.
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info)))
+                if info.split_whitespace().next() == Some("ansi") =>
+            {
                 let end = find_end(&events, i + 1, |e| {
                     matches!(e, Event::End(TagEnd::CodeBlock))
                 });
@@ -356,17 +357,14 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                         _ => None,
                     })
                     .collect();
-                let class = match kind {
-                    CodeBlockKind::Fenced(info) => info
-                        .split_whitespace()
-                        .next()
-                        .map(|lang| format!(" class=\"language-{}\"", html_escape(lang)))
-                        .unwrap_or_default(),
-                    CodeBlockKind::Indented => String::new(),
+                let class = if text.chars().any(is_box) {
+                    "ansi box"
+                } else {
+                    "ansi"
                 };
                 body.push(Event::Html(CowStr::from(format!(
-                    "<pre class=\"box\"><code{class}>{}</code></pre>\n",
-                    html_escape(&text)
+                    "<pre class=\"{class}\"><code class=\"language-ansi\">{}</code></pre>\n",
+                    crate::ansi_html::to_html(&text)
                 ))));
                 i = end + 1;
             }
@@ -397,6 +395,33 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                         i += 1;
                     }
                 }
+            }
+            // A block that draws with box characters is marked, so that a theme can close the gaps
+            // between its lines.
+            Event::Start(Tag::CodeBlock(kind)) if draws_boxes(&events, i) => {
+                let end = find_end(&events, i + 1, |e| {
+                    matches!(e, Event::End(TagEnd::CodeBlock))
+                });
+                let text: String = events[i + 1..end]
+                    .iter()
+                    .filter_map(|e| match e {
+                        Event::Text(t) => Some(t.as_ref()),
+                        _ => None,
+                    })
+                    .collect();
+                let class = match kind {
+                    CodeBlockKind::Fenced(info) => info
+                        .split_whitespace()
+                        .next()
+                        .map(|lang| format!(" class=\"language-{}\"", html_escape(lang)))
+                        .unwrap_or_default(),
+                    CodeBlockKind::Indented => String::new(),
+                };
+                body.push(Event::Html(CowStr::from(format!(
+                    "<pre class=\"box\"><code{class}>{}</code></pre>\n",
+                    html_escape(&text)
+                ))));
+                i = end + 1;
             }
             // A table that is wider than the page scrolls inside its own box.
             Event::Start(Tag::Table(_)) => {
