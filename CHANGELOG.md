@@ -1,3 +1,9 @@
+# Unreleased
+
+## Added
+
+- site: load the widgets and their style in the pages of any theme.
+
 # 0.2.0 - 2026-10-31
 
 ## Added

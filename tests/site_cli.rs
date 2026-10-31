@@ -256,11 +256,16 @@ fn a_theme_supplies_templates_and_files_and_the_site_wins() {
     dir.file("own/both.css", "from the site");
     let out = build(&dir, &[]);
     assert!(out.status.success(), "{}", stderr(&out));
+    let widgets = "<link rel=\"stylesheet\" href=\"/content.css\">\n<link rel=\"stylesheet\" href=\"/widgets.css\">\n";
+    let script = "<script src=\"/widgets.js\" defer></script>\n";
     assert_eq!(
         dir.read("public/a/index.html"),
-        "<body>own page: <h1 id=\"a\">A</h1>\n<p>text</p>\n</body>"
+        format!("{widgets}<body>own page: <h1 id=\"a\">A</h1>\n<p>text</p>\n{script}</body>")
     );
-    assert_eq!(dir.read("public/index.html"), "<body>shared home</body>");
+    assert_eq!(
+        dir.read("public/index.html"),
+        format!("{widgets}<body>shared home{script}</body>")
+    );
     assert_eq!(dir.read("public/theme.css"), "shared css");
     assert_eq!(dir.read("public/both.css"), "from the site");
 }
@@ -284,7 +289,9 @@ fn a_built_in_theme_is_named_and_a_directory_of_that_name_wins() {
     dir.file("docs/templates/index.html", "own docs home");
     let out = build(&dir, &[]);
     assert!(out.status.success(), "{}", stderr(&out));
-    assert_eq!(dir.read("public/a/index.html"), "own docs page");
+    let page = dir.read("public/a/index.html");
+    assert!(page.contains("own docs page"), "{page}");
+    assert!(!page.contains("docs.css"), "{page}");
 }
 
 #[test]
@@ -700,4 +707,57 @@ fn every_theme_demo_of_the_examples_has_a_home_and_its_pages() {
     }
     assert!(demos >= 4, "{demos} demos");
     let _ = std::fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn a_theme_of_its_own_gets_the_widgets_without_naming_them() {
+    let dir = TempDir::new("widgets-theme");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"mine\"\nbase_url = \"https://example.com/sub\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    dir.file(
+        "a.md",
+        "# A\n\n<!-- site: widget tabs -->\n## One\n\nx\n\n## Two\n\ny\n<!-- site: end -->\n",
+    );
+    dir.file(
+        "mine/templates/base.html",
+        "<html><head><title>T</title></head><body>{% block main %}{% endblock %}</body></html>",
+    );
+    dir.file(
+        "mine/templates/page.html",
+        "{% extends \"base.html\" %}{% block main %}{{ page.content }}{% endblock %}",
+    );
+    dir.file("mine/static/widgets.css", "from the theme");
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let page = dir.read("public/a/index.html");
+    assert!(
+        page.contains("<script src=\"/sub/widgets.js\" defer></script>"),
+        "{page}"
+    );
+    assert!(
+        page.contains("<link rel=\"stylesheet\" href=\"/sub/content.css\">"),
+        "{page}"
+    );
+    assert!(dir.exists("public/widgets.js"));
+    assert!(dir.exists("public/widgets-extra.js"));
+    assert!(dir.exists("public/content.css"));
+    assert_eq!(dir.read("public/widgets.css"), "from the theme");
+}
+
+#[test]
+fn a_built_in_theme_loads_the_widgets_once() {
+    let dir = TempDir::new("widgets-builtin");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"docs\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    dir.file("a.md", "# A\n\ntext\n");
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let page = dir.read("public/a/index.html");
+    assert_eq!(page.matches("widgets.js").count(), 1, "{page}");
+    assert_eq!(page.matches("widgets.css").count(), 1, "{page}");
+    assert_eq!(page.matches("content.css").count(), 1, "{page}");
 }

@@ -45,7 +45,7 @@ table.
 ## How it works
 
 The build wraps the blocks in a `div` with the class `dkt-widget`, the name of the widget in
-`data-widget` and its options in other `data-` attributes. A script of the theme builds the
+`data-widget` and its options in other `data-` attributes. A script of dkt builds the
 component from what the `div` holds.
 
 Without the script, the blocks stay in place and the page reads the same. The carousel is the
@@ -58,14 +58,9 @@ exception that is better than plain: its slides are a row that scrolls, with no 
 | `widgets.css`      | the style of the widgets                                                      |
 | `content.css`      | the style of the alerts, the footnotes, the pager and the drawings            |
 
-The built-in themes carry these files and load them. A theme of your own adds them to its
-`base.html`:
-
-```
-<link rel="stylesheet" href="{{ site.base_path }}/content.css">
-<link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
-<script src="{{ site.base_path }}/widgets.js" defer></script>
-```
+`dkt site` writes these 4 files to every site, whatever its theme.
+It adds the 2 style sheets to the head and the script to the end of each page that does not load them, so a theme of your own needs nothing.
+A theme that loads them itself is left as it is, and a file of the same name in the `static` folder of a theme or of the site replaces the one of dkt.
 
 `widgets.js` loads `widgets-extra.js` from the same folder. The style reads the variables `--bg`,
 `--surface`, `--line`, `--fg`, `--muted`, `--accent` and `--accent-bg`, and has a fallback for each.

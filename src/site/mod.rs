@@ -525,7 +525,10 @@ fn write_page(out: &Path, base: &str, url: &str, html: &str) -> Result<()> {
         out.join(rel)
     };
     fs::create_dir_all(&dir)?;
-    fs::write(dir.join("index.html"), html)?;
+    fs::write(
+        dir.join("index.html"),
+        crate::theme::with_widgets(html, base),
+    )?;
     Ok(())
 }
 
@@ -869,6 +872,10 @@ pub fn build(opts: &Options) -> Result<Report> {
         written += 1;
     }
     if scope.builds_statics() {
+        // Every theme gets the widgets, and its own files and the site's replace them.
+        for (path, text) in crate::theme::WIDGET_FILES {
+            write_file(&opts.out.join(path), text)?;
+        }
         if let Some(builtin) = builtin {
             for (path, text) in builtin.static_files() {
                 write_file(&opts.out.join(path), text)?;

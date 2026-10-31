@@ -79,6 +79,60 @@ static PLAIN: Builtin = Builtin {
     ],
 };
 
+/// The files of the widgets and of the content style, written to every site whatever its theme.
+/// A file of the theme or of the site with the same name replaces them.
+pub const WIDGET_FILES: [(&str, &str); 4] = [
+    (
+        "content.css",
+        include_str!("../themes/common/static/content.css"),
+    ),
+    (
+        "widgets.css",
+        include_str!("../themes/common/static/widgets.css"),
+    ),
+    (
+        "widgets.js",
+        include_str!("../themes/common/static/widgets.js"),
+    ),
+    (
+        "widgets-extra.js",
+        include_str!("../themes/common/static/widgets-extra.js"),
+    ),
+];
+
+/// The page with the style and the script of the widgets, for a theme whose templates do not
+/// load them.
+///
+/// A file that the page already loads is left alone, so a built-in theme and a theme that loads
+/// them itself get nothing twice.
+/// The style goes at the end of the head and the script at the end of the body.
+pub fn with_widgets(html: &str, base: &str) -> String {
+    let loads =
+        |file: &str| html.contains(&format!("/{file}\"")) || html.contains(&format!("/{file}'"));
+    let mut head = String::new();
+    for css in ["content.css", "widgets.css"] {
+        if !loads(css) {
+            head.push_str(&format!(
+                "<link rel=\"stylesheet\" href=\"{base}/{css}\">\n"
+            ));
+        }
+    }
+    let script = (!loads("widgets.js"))
+        .then(|| format!("<script src=\"{base}/widgets.js\" defer></script>\n"));
+    let mut out = html.to_string();
+    if !head.is_empty() {
+        let at = out.find("</head>").unwrap_or(0);
+        out.insert_str(at, &head);
+    }
+    if let Some(script) = script {
+        match out.rfind("</body>") {
+            Some(at) => out.insert_str(at, &script),
+            None => out.push_str(&script),
+        }
+    }
+    out
+}
+
 /// The theme a site gets when it names none.
 pub const DEFAULT: &str = "docs";
 
@@ -152,5 +206,39 @@ mod tests {
         }
         assert!(builtin("nothing").is_none());
         assert!(builtin(DEFAULT).is_some());
+    }
+
+    #[test]
+    fn a_page_that_loads_nothing_gets_the_style_and_the_script() {
+        let page = with_widgets(
+            "<html><head><title>T</title></head><body>x</body></html>",
+            "/s",
+        );
+        assert_eq!(
+            page,
+            "<html><head><title>T</title><link rel=\"stylesheet\" href=\"/s/content.css\">\n<link rel=\"stylesheet\" href=\"/s/widgets.css\">\n</head><body>x<script src=\"/s/widgets.js\" defer></script>\n</body></html>"
+        );
+    }
+
+    #[test]
+    fn a_page_that_loads_the_files_gets_nothing_twice() {
+        let page = "<head><link rel=\"stylesheet\" href=\"/content.css\"><link rel=\"stylesheet\" href=\"/widgets.css\"></head><body><script src=\"/widgets.js\" defer></script></body>";
+        assert_eq!(with_widgets(page, ""), page);
+    }
+
+    #[test]
+    fn a_page_that_only_mentions_the_files_in_its_text_still_gets_them() {
+        let page =
+            "<body><code>widgets.js</code> and <pre>href=&quot;/widgets.css&quot;</pre></body>";
+        let out = with_widgets(page, "");
+        assert_eq!(out.matches("widgets.js").count(), 2);
+        assert!(out.contains("<script src=\"/widgets.js\" defer></script>"));
+    }
+
+    #[test]
+    fn a_page_without_head_or_body_gets_them_at_the_start_and_the_end() {
+        let out = with_widgets("<p>x</p>", "");
+        assert!(out.starts_with("<link rel=\"stylesheet\" href=\"/content.css\">"));
+        assert!(out.ends_with("<script src=\"/widgets.js\" defer></script>\n"));
     }
 }
