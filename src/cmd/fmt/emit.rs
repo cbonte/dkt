@@ -315,7 +315,21 @@ impl<'s> Emitter<'s> {
 
     fn paragraph(&mut self, node: &Node<'_>) {
         let atoms = self.atoms_of(node);
-        let lines = wrap(&atoms, self.width());
+        let mut lines = wrap(&atoms, self.width());
+        // The marker of an alert, such as `[!NOTE]`, stays alone on its line.
+        let alone = self
+            .source_lines(node)
+            .first()
+            .is_some_and(|line| is_alert_marker(line.trim()));
+        if alone
+            && let Some(first) = lines.first()
+            && let Some((marker, rest)) = first.split_once(' ')
+            && is_alert_marker(marker)
+        {
+            let (marker, rest) = (marker.to_string(), rest.trim_start().to_string());
+            lines[0] = rest;
+            lines.insert(0, marker);
+        }
         self.lines(&lines);
     }
 
@@ -425,4 +439,16 @@ fn task_marker(item: &Node<'_>) -> Option<bool> {
         Some(Event::TaskListMarker(done)) => Some(*done),
         _ => None,
     }
+}
+
+/// True for the marker that opens a GitHub alert: `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
+/// `[!WARNING]` and `[!CAUTION]`.
+fn is_alert_marker(text: &str) -> bool {
+    text.strip_prefix("[!")
+        .and_then(|rest| rest.strip_suffix(']'))
+        .is_some_and(|kind| {
+            ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]
+                .iter()
+                .any(|k| k.eq_ignore_ascii_case(kind))
+        })
 }

@@ -126,3 +126,19 @@ fn write_from_stdin_is_refused() {
     let err = String::from_utf8(o.stderr).expect("utf-8 stderr");
     assert!(err.contains("needs a file"), "{err}");
 }
+
+#[test]
+fn the_marker_of_an_alert_stays_alone_on_its_line() {
+    let text = "> [!NOTE]\n> A note, with words.\n\n> [!WARNING]\n> Two lines\n> of text.\n";
+    let out = stdout(&run(&["-"], text));
+    assert_eq!(
+        out,
+        "> [!NOTE]\n> A note, with words.\n\n> [!WARNING]\n> Two lines of text.\n"
+    );
+    assert_eq!(stdout(&run(&["-"], &out)), out);
+    // A marker that shares its line with text was never an alert, and is wrapped like text.
+    assert_eq!(
+        stdout(&run(&["-"], "> [!NOTE] text\n> more\n")),
+        "> [!NOTE] text more\n"
+    );
+}

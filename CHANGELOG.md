@@ -13,6 +13,7 @@
 ## Fixed
 
 - rst: read the address of a target, which was cut at its last colon.
+- fmt: keep the marker of an alert alone on its line.
 - rst: read a directive with a space before its colons, as in note ::.
 
 ## Changed
