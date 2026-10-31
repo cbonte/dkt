@@ -43,6 +43,10 @@ hand-wrapped source as a break on screen. `cat` joins them by default and keeps 
 with continuation lines aligned under their list item or quote. `fmt` solves the same problem at
 the source: it rewraps the file so the breaks land where you want them.
 
+## Development
+
+The build, the tests and the structure of the code are in [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## Licence
 
 Dual licensed under [MIT](LICENSE-MIT) or [Apache 2.0](LICENSE-APACHE), at your option.
