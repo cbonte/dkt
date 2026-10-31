@@ -282,6 +282,11 @@ fn the_terminal_example_of_the_site_is_what_cat_writes() {
             "unicode",
         ])
         .arg(root.join("examples/terminal/sample.md"))
+        // The colours depend on what the terminal announces, so the test announces one.
+        .env("COLORTERM", "truecolor")
+        .env("TERM", "xterm-256color")
+        .env_remove("TERM_PROGRAM")
+        .env_remove("NO_COLOR")
         .output()
         .expect("run dkt cat");
     let written = String::from_utf8(out.stdout).expect("utf-8");

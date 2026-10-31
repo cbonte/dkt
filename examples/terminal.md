@@ -34,7 +34,7 @@ graph LR
 ```
 ~~~
 
-Run with `dkt cat --color always --width 72 --borders unicode examples/terminal/sample.md`, it writes this. The block holds the escape sequences of the terminal, and the site draws their colours. A terminal adds the links, and a pager keeps the colours with `less -R`.
+Run in a terminal that draws 24-bit colours, `COLORTERM=truecolor dkt cat --color always --width 72 --borders unicode examples/terminal/sample.md` writes this. The block holds the escape sequences of the terminal, and the site draws their colours. A terminal adds the links, and a pager keeps the colours with `less -R`.
 
 ```ansi
 [0;2m# [0;1;4;38;2;85;85;255mRelease notes[0m
