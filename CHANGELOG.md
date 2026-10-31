@@ -36,3 +36,14 @@
 - fmt: rewrap paragraphs to a target width without touching inline markup.
 - fmt: normalise list markers and heading syntax and realign tables.
 - fmt: report the files that would change or print a diff of the changes.
+- rst: read reStructuredText, as Sphinx documents are written.
+- cat: read a document in any format, from its extension or with --format.
+- cat: write a file that no format claims as it is, with a warning.
+- haproxy: convert a HAProxy documentation text to Markdown, as a format of a page of a site.
+- haproxy: read tables drawn as a grid, with headers that group columns.
+- haproxy: keep drawings as diagrams and split a paragraph before the list it introduces.
+- haproxy: show a command with marks under it as a diagram.
+- haproxy: read ordered lists, definitions that line up, columns lined up with spaces and usable in lines.
+- haproxy: read paragraphs, examples and lists inside the items of a list, and notes of every kind.
+- haproxy: link the keywords that start an item or a row of the matrix, and flag deprecated keywords.
+- haproxy: read chapters whose number is closed with a parenthesis.

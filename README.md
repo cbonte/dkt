@@ -1,6 +1,7 @@
 # dkt
 
-Doc Kit (dk:t): document tools in one binary, sharing one parser and one model.
+Doc Kit (dk:t): document tools in one binary, sharing one parser and one model. A document in
+Markdown, in reStructuredText or in another format is read as Markdown first.
 
 | Command                               | Purpose                                                  |
 | ------------------------------------- | -------------------------------------------------------- |
@@ -8,7 +9,12 @@ Doc Kit (dk:t): document tools in one binary, sharing one parser and one model.
 | [dkt fmt](docs/fmt.md)                | rewrap prose and normalise block syntax                  |
 | [dkt toc](docs/toc.md)                | insert or refresh a table of contents                    |
 | [dkt lint](docs/lint.md)              | check links, anchors and heading structure               |
+| [the rst format](docs/rst.md)         | read reStructuredText, as Sphinx documents are written   |
+| [the haproxy format](docs/haproxy.md) | read the documentation texts of HAProxy                  |
 
+`cat`, `convert`, `html` and `site` read Markdown, reStructuredText and the documentation texts of
+HAProxy, from the extension of the file or from a format that is named. `fmt`, `lint` and `toc` work
+on Markdown.
 
 ```
 cargo build --release

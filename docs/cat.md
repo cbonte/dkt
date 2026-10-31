@@ -1,13 +1,22 @@
 # dkt cat
 
-Renders Markdown as styled text on the terminal.
+Renders a document as styled text on the terminal. The document is Markdown, reStructuredText or a
+documentation text of HAProxy.
 
 ```
 dkt cat README.md
 dkt cat docs/*.md | less -R
 cat notes.md | dkt cat
 dkt cat --soft-breaks preserve notes.md | less -R
+dkt cat api.rst
+dkt cat --format haproxy --section tune.bufsize configuration.txt
 ```
+
+The format comes from the extension, `.md` giving Markdown and `.rst` giving reStructuredText, and it
+is Markdown for the standard input. `--format markdown|rst|haproxy` names it. A file with any other
+extension, a `.txt` file included, is written as it is, as the standard `cat` does, with a warning on
+stderr that says to give the format. The document is read as Markdown first, so every
+option below applies to each format.
 
 With several files, each document starts with its file name and a rule (`--no-header` hides it).
 An unreadable file is reported on stderr, the others are still rendered, and the exit code is
@@ -20,7 +29,7 @@ non-zero.
 | Single newline inside a paragraph | joined, paragraph reflowed (CommonMark)                                                                                                                       | `--soft-breaks preserve` keeps each source line  |
 | Line width                        | terminal width, else 80                                                                                                                                       | `--width N`                                      |
 | Colours                           | on when stdout is a terminal or a pipe from an interactive shell (`\| less -R`), off when redirected to a file or run without a terminal, off with `NO_COLOR` | `--color auto`, `always`, `never`                |
-| Links                             | OSC 8 hyperlink on terminals that support it, else `text (url)`                                                                                               | `--links auto`, `osc8`, `inline`, `none`         |
+| Links                             | OSC 8 hyperlink on terminals that support it, else `text (url)`, and the text alone for a link to the same document                                                                                               | `--links auto`, `osc8`, `inline`, `none`         |
 | Bullets, rules, table borders     | Unicode in a UTF-8 locale, else ASCII                                                                                                                         | `--borders auto`, `unicode`, `ascii`             |
 | Code blocks                       | syntax highlighted (syntect), tabs expanded                                                                                                                   | `--theme NAME`, `--list-themes`, `--tab-width N` |
 | Mermaid blocks                    | drawn as text when supported                                                                                                                                  | `--no-diagrams`                                  |

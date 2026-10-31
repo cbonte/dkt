@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 
 use crate::RenderOptions;
 use crate::cli_extras::is_broken_pipe;
+use crate::format::Format;
 use crate::pager;
 use crate::term::Probe;
 
@@ -35,9 +36,31 @@ fn render_one(
     out: &mut dyn Write,
 ) -> Result<()> {
     let text = read_input(path)?;
+    let format = if path.as_os_str() == "-" {
+        Some(Format::of(
+            Some(cli.format.as_deref().unwrap_or("markdown")),
+            "the input",
+        )?)
+    } else {
+        let name = path.display().to_string();
+        match cli.format.as_deref() {
+            Some(named) => Some(Format::of(Some(named), &name)?),
+            None => Format::of(None, &name).ok(),
+        }
+    };
     if header {
         crate::render_file_header(&path.display().to_string(), opts, out)?;
     }
+    let Some(format) = format else {
+        // A file that no format claims is written as it is, as the standard cat does.
+        eprintln!(
+            "dkt cat: {}: no known format for its extension, written as it is, give --format to render it",
+            path.display()
+        );
+        out.write_all(text.as_bytes())?;
+        return Ok(());
+    };
+    let text = format.markdown(&text);
     let doc = crate::document(&text, opts);
     if cli.toc {
         return crate::render_outline(&doc, cli.toc_depth, opts, out);

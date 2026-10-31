@@ -39,8 +39,13 @@ pub enum BorderArg {
 /// Options of `dkt cat`.
 #[derive(ClapArgs, Debug)]
 pub struct Args {
-    /// Markdown files to render in order; reads stdin when omitted, or for "-".
+    /// Files to render in order; reads stdin when omitted, or for "-".
     pub files: Vec<PathBuf>,
+
+    /// How the documents are written: markdown, haproxy or rst. It comes from the extension of
+    /// each file, and it is markdown for the standard input.
+    #[arg(long, value_name = "FORMAT")]
+    pub format: Option<String>,
 
     /// Line width in columns; defaults to the terminal width.
     #[arg(short, long)]

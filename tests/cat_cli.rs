@@ -234,3 +234,35 @@ fn a_link_to_the_same_document_shows_its_text_and_not_its_address() {
     assert!(text.contains("the site (https://example.org/x)"), "{text}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_file_that_no_format_claims_is_written_as_it_is_with_a_warning() {
+    let dir = std::env::temp_dir().join(format!("dkt-cat-raw-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let file = dir.join("notes.txt");
+    std::fs::write(&file, "# Not rendered\n\n* as written\n").expect("write");
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_dkt"))
+        .arg("cat")
+        .arg(&file)
+        .output()
+        .expect("run dkt cat");
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "# Not rendered\n\n* as written\n"
+    );
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        err.contains("no known format") && err.contains("--format"),
+        "{err}"
+    );
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_dkt"))
+        .args(["cat", "--format", "markdown"])
+        .arg(&file)
+        .output()
+        .expect("run dkt cat");
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("• as written"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
