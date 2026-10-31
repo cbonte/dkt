@@ -15,6 +15,16 @@ intentional change.
 `scripts/notice.py` rewrites `NOTICE` from the crates that the binary links.
 `scripts/notice.py --check` exits 1 when `NOTICE` is stale, and runs in the CI.
 
+## Continuous integration
+
+The checks do not run on a push to a branch. They run in 3 cases:
+
+| Case | What runs |
+| --- | --- |
+| a pull request | the tests on Linux and Windows, clippy and the notice |
+| a tag `v*` | the same checks, the release archive and the site |
+| a manual run | the checks, or the site, from the Actions tab |
+
 ## The library
 
 The crate also holds the parser, the block model, the terminal probe, the ANSI writer, GitHub

@@ -2,8 +2,7 @@ name: pages
 
 on:
   push:
-    branches: [master]
-    paths: ["dkt.toml", "docs/**", "themes/**", "src/**", "demos/**", ".github/workflows/pages.yml"]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

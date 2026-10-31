@@ -3,6 +3,7 @@
 ## Changed
 
 - lint: read the anchors of a file as a stream, with a fraction of the memory.
+- ci: run the checks on a pull request, a tag or a manual start, not on every push.
 - site: convert each document once and build the pages on several threads.
 
 # 0.1.0 - 2026-10-31
