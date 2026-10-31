@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [master]
-    paths: ["dkt.toml", "docs/**", "themes/**", "src/**"]
+    paths: ["dkt.toml", "docs/**", "themes/**", "src/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,6 @@ jobs:
           path: public
 
   deploy:
-    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     environment:
