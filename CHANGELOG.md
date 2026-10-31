@@ -1,3 +1,9 @@
+# Unreleased
+
+## Changed
+
+- lint: read the anchors of a file as a stream, with a fraction of the memory.
+
 # 0.1.0 - 2026-10-31
 
 ## Added

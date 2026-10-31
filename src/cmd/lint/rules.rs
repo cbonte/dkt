@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::slug::{self, github_anchor};
+use crate::slug::github_anchor;
 use crate::source::LineIndex;
 use crate::tree::parser_options;
 use pulldown_cmark::{BrokenLink, CodeBlockKind, Event, LinkType, Parser, Tag, TagEnd};
@@ -43,14 +43,11 @@ impl<'a> Source<'a> {
 }
 
 /// Anchors a Markdown file offers: its heading anchors plus explicit HTML names.
+///
+/// A heading inside a block quote, a list or a footnote has no anchor, as on GitHub.
+/// A link in a heading gives its text to the anchor, not its address.
 pub fn anchors(text: &str) -> HashSet<String> {
-    // A link in a heading gives its text to the anchor, not its address.
-    let opts = crate::RenderOptions {
-        links: crate::options::LinkMode::None,
-        ..crate::RenderOptions::default()
-    };
-    let doc = crate::document(text, &opts);
-    let mut set: HashSet<String> = slug::outline(&doc).into_iter().map(|e| e.anchor).collect();
+    let mut set = heading_anchors(text);
     for tag in crate::html::tokenize(text) {
         if let crate::html::Token::Tag(tag) = tag {
             for name in ["id", "name"] {
@@ -58,6 +55,42 @@ pub fn anchors(text: &str) -> HashSet<String> {
                     set.insert(value);
                 }
             }
+        }
+    }
+    set
+}
+
+/// The anchors of the headings of a Markdown file.
+fn heading_anchors(text: &str) -> HashSet<String> {
+    let mut set = HashSet::new();
+    let mut seen = HashMap::new();
+    let mut containers = 0usize;
+    let mut heading: Option<String> = None;
+    for event in Parser::new_ext(text, parser_options()) {
+        match event {
+            Event::Start(Tag::BlockQuote(_) | Tag::List(_) | Tag::FootnoteDefinition(_)) => {
+                containers += 1;
+            }
+            Event::End(TagEnd::BlockQuote(_) | TagEnd::List(_) | TagEnd::FootnoteDefinition) => {
+                containers -= 1;
+            }
+            Event::Start(Tag::Heading { .. }) if containers == 0 => heading = Some(String::new()),
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some(words) = heading.take() {
+                    set.insert(github_anchor(&words, &mut seen));
+                }
+            }
+            Event::Text(words) | Event::Code(words) => {
+                if let Some(heading) = heading.as_mut() {
+                    heading.push_str(&words);
+                }
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                if let Some(heading) = heading.as_mut() {
+                    heading.push(' ');
+                }
+            }
+            _ => {}
         }
     }
     set
@@ -449,6 +482,54 @@ pub fn check(path: &Path, text: &str, enabled: &HashSet<Rule>, line_length: usiz
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The anchors the document model gives, which the streaming version has to match.
+    fn anchors_of_the_model(text: &str) -> HashSet<String> {
+        let opts = crate::RenderOptions {
+            links: crate::options::LinkMode::None,
+            ..crate::RenderOptions::default()
+        };
+        let doc = crate::document(text, &opts);
+        crate::slug::outline(&doc)
+            .into_iter()
+            .map(|e| e.anchor)
+            .collect()
+    }
+
+    #[test]
+    fn heading_anchors_match_the_model_on_a_corpus() {
+        let Ok(dir) = std::env::var("DKT_CORPUS") else {
+            return;
+        };
+        let mut todo = vec![std::path::PathBuf::from(dir)];
+        let mut checked = 0;
+        while let Some(path) = todo.pop() {
+            if path.is_dir() {
+                todo.extend(std::fs::read_dir(&path).unwrap().map(|e| e.unwrap().path()));
+            } else if path.extension().is_some_and(|e| e == "md") {
+                let text = std::fs::read_to_string(&path).unwrap();
+                assert_eq!(
+                    heading_anchors(&text),
+                    anchors_of_the_model(&text),
+                    "{}",
+                    path.display()
+                );
+                checked += 1;
+            }
+        }
+        eprintln!("{checked} documents compared");
+    }
+
+    #[test]
+    fn anchors_are_those_of_the_document_model() {
+        for text in [
+            "# A\n\n## B `c` d\n\n## B `c` d\n\n> ## Quoted\n\n- ## Listed\n\n### [Link](http://x) *em* **b**\n\nSetext\n===\n\nline\nbreak\n---\n\n#### 中文 & more!\n",
+            "## Dup\n## Dup\n## Dup\n\n[^1]: note\n\n    ## inside\n",
+            "| a |\n|---|\n| b |\n\n# ![img](x.png) alt\n",
+        ] {
+            assert_eq!(heading_anchors(text), anchors_of_the_model(text), "{text}");
+        }
+    }
 
     fn findings(text: &str, rules: &[Rule]) -> Vec<String> {
         let enabled: HashSet<Rule> = rules.iter().copied().collect();
