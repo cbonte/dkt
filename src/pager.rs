@@ -32,7 +32,7 @@ pub fn command_line(value: Option<&str>) -> (String, Vec<String>) {
 
 /// Value of the first pager variable that is set, in order of precedence.
 pub fn from_env() -> Option<String> {
-    ["MDKT_PAGER", "PAGER"]
+    ["DKT_PAGER", "PAGER"]
         .iter()
         .find_map(|name| std::env::var(name).ok())
         .filter(|v| !v.trim().is_empty())

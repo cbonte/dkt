@@ -115,7 +115,7 @@ pub struct Args {
     #[arg(long, value_name = "HEADING")]
     pub section: Option<String>,
 
-    /// Send the output to a pager; the command comes from MDKT_PAGER or PAGER.
+    /// Send the output to a pager; the command comes from DKT_PAGER or PAGER.
     #[arg(short, long)]
     pub pager: bool,
 }
