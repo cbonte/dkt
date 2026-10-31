@@ -31,6 +31,20 @@ Every document is read as Markdown first.
 - `cat` writes such a file as it is when no format is named.
 - `fmt`, `lint` and `toc` work on Markdown only.
 
+## Pages
+
+A site made by `dkt site` is more than text:
+
+| Feature                                                                                                 | Where                                                     |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [15 widgets](docs/widgets.md), such as tabs, a carousel, a quiz, a filterable table and a progress page | comments around ordinary Markdown                         |
+| Mermaid diagrams, drawn as SVG                                                                          | a `mermaid` block, as on GitHub                           |
+| the colours of a terminal                                                                               | an `ansi` block                                           |
+| a search palette, cards for the links and pagers                                                        | the [properties file](docs/site.md)                       |
+| examples of each                                                                                        | [the site of dkt](https://cbonte.github.io/dkt/examples/) |
+
+The documents stay readable on GitHub and in the terminal, because the widgets are comments.
+
 ## Install
 
 ```
