@@ -1,0 +1,39 @@
+[site]
+title = "dkt"
+description = "Doc Kit: document tools in one binary. Render, format, index, check and publish documents, in Markdown, reStructuredText and other formats, that stay readable on GitHub."
+base_url = "https://cbonte.github.io/dkt"
+repo = "https://github.com/cbonte/dkt"
+branch = "master"
+static = "static"
+
+[[nav]]
+name = "Home"
+url = "/"
+[[nav]]
+name = "Commands"
+url = "/commands/"
+section = "commands"
+
+[home]
+template = "index.html"
+
+[[section]]
+name = "commands"
+title = "Commands"
+description = "One guide per command."
+sidebar = true
+
+[[page]]
+glob = "docs/*.md"
+section = "commands"
+order = ["cat", "fmt", "toc", "lint", "convert", "html", "site", "rst", "haproxy"]
+
+[data]
+install = "cargo install --path ."
+
+[data.brand]
+favicon = "/brand/favicon.svg"
+
+[[asset]]
+src = "brand"
+url = "/brand"

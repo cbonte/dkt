@@ -1,0 +1,23 @@
+{# The home page: the title, the description and the install line on the left, the logo on the right, then the pages by section. #}
+{% extends "base.html" %}
+{% block title %}{{ site.title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ site.base_path }}/dkt.css">{% endblock %}
+{% block main %}
+<div class="layout"><main class="prose home">
+<section class="hero">
+<div class="copy">
+<h1>{{ site.title }}</h1>
+{% if site.description %}<p class="lede">{{ site.description }}</p>{% endif %}
+{% if data.install %}<pre><code>{{ data.install }}</code></pre>{% endif %}
+</div>
+<div class="art">{% include "partials/brand.html" %}</div>
+</section>
+{% for name, sec in site.sections | items %}
+<h2>{{ sec.title }}</h2>
+<div class="cards">
+{% for p in sec.pages %}<a class="card" href="{{ p.url }}"><b>{{ p.title }}</b>{% if p.description %}<span>{{ p.description }}</span>{% endif %}</a>
+{% endfor %}
+</div>
+{% endfor %}
+</main></div>
+{% endblock %}
