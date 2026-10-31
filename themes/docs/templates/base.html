@@ -8,6 +8,7 @@
 {% if data.brand and data.brand.favicon %}<link rel="icon" type="image/svg+xml" href="{{ site.base_path }}{{ data.brand.favicon }}">{% endif %}
 <script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="stylesheet" href="{{ site.base_path }}/docs.css">
+<link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
 {% if site.colors_css %}<style>{{ site.colors_css | safe }}</style>{% endif %}
 {% block head %}{% endblock %}
 </head>
@@ -32,5 +33,6 @@
 </dialog>
 <script src="{{ site.base_path }}/search.js"></script>{% endif %}
 <script src="{{ site.base_path }}/docs.js"></script>
+<script src="{{ site.base_path }}/widgets.js" defer></script>
 </body>
 </html>

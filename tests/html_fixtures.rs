@@ -119,3 +119,37 @@ fn an_annotation_that_does_not_hold_is_left_as_a_comment() {
     let page = page::render("<!-- site: nope -->\n\ntext\n", None);
     assert!(page.content.contains("<!-- site: nope -->"));
 }
+
+#[test]
+fn a_widget_wraps_the_blocks_up_to_its_end() {
+    let page = page::render(
+        "<!-- site: widget tabs id=install -->\n\n### npm\n\n```\nnpm i\n```\n\n### cargo\n\ntext\n\n<!-- site: end -->\n\nafter\n",
+        None,
+    );
+    let open = r#"<div class="dkt-widget" data-widget="tabs" data-id="install">"#;
+    assert!(page.content.contains(open), "{}", page.content);
+    assert_eq!(page.content.matches("</div>").count(), 1);
+    assert!(page.content.contains(r##"<a href="#npm">npm</a>"##));
+    assert!(page.content.find("</div>") < page.content.find("<p>after</p>"));
+    assert_eq!(page.headings.len(), 2);
+}
+
+#[test]
+fn a_widget_with_no_id_is_named_by_its_place() {
+    let page = page::render(
+        "<!-- site: widget steps -->\n\n1. a\n\n<!-- site: end -->\n\n<!-- site: widget quiz answer=2 -->\n\n1. x\n2. y\n\n<!-- site: end -->\n",
+        None,
+    );
+    assert!(page.content.contains(r#"data-widget="steps" data-id="w1""#));
+    assert!(
+        page.content
+            .contains(r#"data-widget="quiz" data-id="w2" data-answer="2""#)
+    );
+}
+
+#[test]
+fn a_widget_that_does_not_hold_is_left_as_a_comment() {
+    let page = page::render("<!-- site: widget dance -->\n\ntext\n", None);
+    assert!(page.content.contains("<!-- site: widget dance -->"));
+    assert!(!page.content.contains("dkt-widget"));
+}

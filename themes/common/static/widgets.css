@@ -1,0 +1,58 @@
+/* The components of the widgets, set with the variables of the theme. */
+.dkt-widget { margin: 1.2em 0; }
+.dkt-widget > :first-child { margin-top: 0; }
+.dkt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Copy button of the code blocks */
+pre.dkt-copyable { position: relative; }
+.dkt-copy { position: absolute; top: 6px; right: 6px; padding: 2px 8px; font: 12px/1.6 inherit; color: var(--muted, #5b6370); background: var(--surface, #f6f7f9); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; cursor: pointer; opacity: 0; }
+pre.dkt-copyable:hover .dkt-copy, .dkt-copy:focus-visible, .dkt-copy[data-done] { opacity: 1; }
+@media (hover: none) { .dkt-copy { opacity: 1; } }
+
+/* Buttons shared by the widgets */
+.dkt-button { padding: 4px 12px; font: inherit; color: var(--fg, #16181d); background: var(--surface, #f6f7f9); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; cursor: pointer; }
+.dkt-button:hover:not(:disabled) { border-color: var(--accent, #c2410c); color: var(--accent, #c2410c); }
+.dkt-button:disabled { opacity: .5; cursor: default; }
+
+/* Tabs */
+.dkt-ready[data-widget="tabs"] .dkt-tablist { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line, #e3e6eb); margin-bottom: 12px; }
+.dkt-tab { padding: 6px 14px; font: inherit; color: var(--muted, #5b6370); background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.dkt-tab[aria-selected="true"] { color: var(--accent, #c2410c); border-bottom-color: var(--accent, #c2410c); }
+.dkt-tab:hover { color: var(--fg, #16181d); }
+.dkt-panel[hidden] { display: none; }
+
+/* Progress of a checklist or of steps */
+.dkt-progress { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; color: var(--muted, #5b6370); font-size: 13px; }
+.dkt-progress progress { flex: 0 1 160px; height: 6px; appearance: none; border: 0; border-radius: 3px; background: var(--line, #e3e6eb); accent-color: var(--accent, #c2410c); }
+.dkt-progress progress::-webkit-progress-bar { background: var(--line, #e3e6eb); border-radius: 3px; }
+.dkt-progress progress::-webkit-progress-value { background: var(--accent, #c2410c); border-radius: 3px; }
+.dkt-progress progress::-moz-progress-bar { background: var(--accent, #c2410c); border-radius: 3px; }
+.dkt-ready[data-widget="checklist"] ul { list-style: none; padding-left: 0; }
+.dkt-ready[data-widget="checklist"] li { padding: 2px 0; }
+.dkt-ready[data-widget="checklist"] input { margin-right: 8px; cursor: pointer; accent-color: var(--accent, #c2410c); }
+.dkt-ready[data-widget="checklist"] li:has(input:checked) { color: var(--muted, #5b6370); text-decoration: line-through; }
+
+/* Steps */
+.dkt-ready[data-widget="steps"] > ol > li { padding: 8px 12px; margin: 6px 0; border: 1px solid var(--line, #e3e6eb); border-radius: 8px; }
+.dkt-ready[data-widget="steps"] > ol > li.dkt-current { border-color: var(--accent, #c2410c); background: var(--accent-bg, #fff1e8); }
+.dkt-ready[data-widget="steps"] > ol > li.dkt-done { color: var(--muted, #5b6370); }
+.dkt-ready[data-widget="steps"] > ol > li .dkt-button { display: block; margin-top: 6px; }
+
+/* Quiz */
+.dkt-ready[data-widget="quiz"] ul, .dkt-ready[data-widget="quiz"] ol { list-style: none; padding-left: 0; }
+.dkt-ready[data-widget="quiz"] [role="radio"] { padding: 6px 12px; margin: 4px 0; border: 1px solid var(--line, #e3e6eb); border-radius: 8px; cursor: pointer; }
+.dkt-ready[data-widget="quiz"] [role="radio"]:hover { border-color: var(--accent, #c2410c); }
+.dkt-ready[data-widget="quiz"] [aria-disabled="true"] { cursor: default; }
+.dkt-ready[data-widget="quiz"] .dkt-right { border-color: #15803d; background: color-mix(in srgb, #15803d 14%, transparent); }
+.dkt-ready[data-widget="quiz"] .dkt-wrong { border-color: #b91c1c; background: color-mix(in srgb, #b91c1c 14%, transparent); }
+.dkt-result { margin: 8px 0; font-weight: 600; }
+.dkt-after[hidden] { display: none; }
+
+/* Carousel */
+.dkt-ready[data-widget="carousel"] .dkt-viewport { border: 1px solid var(--line, #e3e6eb); border-radius: 10px; padding: 16px; }
+.dkt-slide[hidden] { display: none; }
+.dkt-slide img { max-width: 100%; height: auto; }
+.dkt-controls { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
+.dkt-dots { display: flex; gap: 6px; }
+.dkt-dot { width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; background: var(--line, #e3e6eb); cursor: pointer; }
+.dkt-dot[aria-current="true"] { background: var(--accent, #c2410c); }

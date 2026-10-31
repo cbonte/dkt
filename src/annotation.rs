@@ -6,6 +6,7 @@
 //! `figure` applies to the place it is written.
 //! `replace` applies to the blocks up to the next `end`.
 //! `alias` applies to the section it is written in, and gives the words that find it in a search.
+//! `widget` applies to the blocks up to the next `end`, and makes a component of them.
 //! A comment that does not start with `site:` is not an annotation and is left alone.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -18,15 +19,20 @@ pub enum Kind {
     Replace,
     End,
     Alias,
+    Widget,
 }
 
+/// The components a `widget` annotation can name.
+pub const WIDGETS: [&str; 5] = ["tabs", "checklist", "quiz", "steps", "carousel"];
+
 impl Kind {
-    pub const ALL: [Kind; 5] = [
+    pub const ALL: [Kind; 6] = [
         Kind::Page,
         Kind::Figure,
         Kind::Replace,
         Kind::End,
         Kind::Alias,
+        Kind::Widget,
     ];
 
     pub fn name(self) -> &'static str {
@@ -36,6 +42,7 @@ impl Kind {
             Kind::Replace => "replace",
             Kind::End => "end",
             Kind::Alias => "alias",
+            Kind::Widget => "widget",
         }
     }
 
@@ -45,6 +52,7 @@ impl Kind {
             Kind::Figure | Kind::Replace => &["name", "src", "dark", "alt", "caption"],
             Kind::End => &[],
             Kind::Alias => &["words"],
+            Kind::Widget => &["id", "answer"],
         }
     }
 
@@ -179,6 +187,16 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
         flags: BTreeSet::new(),
     };
     for word in words {
+        if kind == Kind::Widget && !annotation.args.contains_key("widget") && !word.contains('=') {
+            if !WIDGETS.contains(&word.as_str()) {
+                return Err(format!(
+                    "unknown widget '{word}', expected one of {}",
+                    WIDGETS.join(", ")
+                ));
+            }
+            annotation.args.insert("widget".to_string(), word);
+            continue;
+        }
         match word.split_once('=') {
             Some((key, value)) if kind.keys().contains(&key) => {
                 annotation.args.insert(key.to_string(), value.to_string());
@@ -197,6 +215,28 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
         && !annotation.args.contains_key("src")
     {
         return Err(format!("'{}' needs a name or a src", kind.name()));
+    }
+    if kind == Kind::Widget {
+        let Some(widget) = annotation.get("widget") else {
+            return Err("'widget' needs a name".to_string());
+        };
+        match (widget == "quiz", annotation.get("answer")) {
+            (true, None) => return Err("'quiz' needs an answer".to_string()),
+            (true, Some(answer)) if answer.parse::<usize>().is_ok_and(|n| n > 0) => {}
+            (true, Some(answer)) => {
+                return Err(format!("answer '{answer}' is not a position from 1"));
+            }
+            (false, Some(_)) => return Err(format!("'{widget}' does not take 'answer'")),
+            (false, None) => {}
+        }
+        if annotation.get("id").is_some_and(|id| {
+            id.is_empty()
+                || !id
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        }) {
+            return Err("an id is letters, digits, hyphens and underscores".to_string());
+        }
     }
     if kind == Kind::Alias && annotation.get("words").is_none_or(|w| w.trim().is_empty()) {
         return Err("'alias' needs words".to_string());
@@ -244,6 +284,27 @@ mod tests {
             .expect("valid");
         assert_eq!(a.kind, Kind::Figure);
         assert!(from_html("<div><!-- site: end --></div>").is_none());
+    }
+
+    #[test]
+    fn a_widget_has_a_name_and_keys() {
+        let a = parsed(" site: widget tabs id=install ");
+        assert_eq!(a.kind, Kind::Widget);
+        assert_eq!(a.get("widget"), Some("tabs"));
+        assert_eq!(a.get("id"), Some("install"));
+        let quiz = parsed(" site: widget quiz answer=2 ");
+        assert_eq!(quiz.get("answer"), Some("2"));
+    }
+
+    #[test]
+    fn widget_mistakes_are_named() {
+        assert!(refused(" site: widget").contains("needs a name"));
+        assert!(refused(" site: widget dance").contains("unknown widget 'dance'"));
+        assert!(refused(" site: widget quiz").contains("needs an answer"));
+        assert!(refused(" site: widget quiz answer=0").contains("not a position"));
+        assert!(refused(" site: widget tabs answer=1").contains("does not take 'answer'"));
+        assert!(refused(" site: widget tabs id=a/b").contains("an id is"));
+        assert!(refused(" site: widget tabs color=red").contains("does not take 'color'"));
     }
 
     #[test]

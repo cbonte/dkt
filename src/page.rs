@@ -94,6 +94,21 @@ fn target<'a>(dest: &CowStr<'a>, rewrite: Option<Rewrite<'_>>) -> CowStr<'a> {
         .unwrap_or_else(|| dest.clone())
 }
 
+/// The tag that opens a widget. The script of the theme builds the component from what it holds.
+/// A widget with no `id` is named by its place on the page.
+fn widget_open(note: &Annotation, position: usize) -> String {
+    let name = note.get("widget").unwrap_or_default();
+    let id = note
+        .get("id")
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("w{position}"));
+    let answer = note
+        .get("answer")
+        .map(|a| format!(r#" data-answer="{a}""#))
+        .unwrap_or_default();
+    format!("<div class=\"dkt-widget\" data-widget=\"{name}\" data-id=\"{id}\"{answer}>\n")
+}
+
 /// Renders `md` as a page. `rewrite` sees the target of every link and image.
 pub fn render(md: &str, rewrite: Option<Rewrite<'_>>) -> Page {
     render_with(
@@ -114,6 +129,8 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
     let mut seen = HashMap::new();
     let mut page_notes = Vec::new();
     let mut under: Option<String> = None;
+    let mut widgets = 0;
+    let mut open_widgets = 0;
     let mut i = 0;
     while i < events.len() {
         match &events[i] {
@@ -207,7 +224,17 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                             i = end + 1;
                         }
                     }
-                    Kind::End => {}
+                    Kind::Widget => {
+                        widgets += 1;
+                        open_widgets += 1;
+                        body.push(Event::Html(CowStr::from(widget_open(&note, widgets))));
+                    }
+                    Kind::End => {
+                        if open_widgets > 0 {
+                            open_widgets -= 1;
+                            body.push(Event::Html(CowStr::from("</div>\n")));
+                        }
+                    }
                     Kind::Alias => {
                         if let Some(words) = note.get("words") {
                             page.aliases.push(Alias {

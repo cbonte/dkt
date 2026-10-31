@@ -15,8 +15,8 @@ which `--output` (`-o`) names, is cleared before each build, but only when `dkt 
 a `.dkt-site` file inside tells. Any other directory that is not empty is left alone, and the build
 stops.
 
-The documents are read and rendered on several threads, as many as the cores up to 8. The
-variable `DKT_JOBS` sets the number, and `DKT_JOBS=1` builds on one thread with the least memory.
+The documents are read and rendered on several threads, as many as the cores up to 8. The variable
+`DKT_JOBS` sets the number, and `DKT_JOBS=1` builds on one thread with the least memory.
 
 ## Building a part of a site
 
@@ -141,6 +141,9 @@ output.
 In the `docs` theme, every heading below the title is a link to itself, with a button to copy its
 address when the pointer is over it. A wide table scrolls in its own box, and a long entry of a menu
 ends with an ellipsis and shows its text as its title.
+
+Every built-in theme carries [widgets](widgets.md) and a copy button on the code blocks, with the
+files `widgets.css` and `widgets.js`.
 
 `docs` and `paper` carry a switch between the light and the dark theme. Without a choice, all 3
 follow the system.

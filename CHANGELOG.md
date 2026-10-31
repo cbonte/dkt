@@ -1,5 +1,11 @@
 # Unreleased
 
+## Added
+
+- widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
+- theme: add a copy button to the code blocks.
+- lint: report a widget that is unknown, nested or never closed.
+
 ## Changed
 
 - lint: read the anchors of a file as a stream, with a fraction of the memory.

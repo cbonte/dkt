@@ -365,7 +365,7 @@ fn check_blocks(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Finding
 /// Checks the annotations for the site: each one holds, and a `replace` is closed by an `end`.
 fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
     use crate::annotation::{self, Kind};
-    let mut open: Option<usize> = None;
+    let mut open: Option<(Kind, usize)> = None;
     for (event, range) in Parser::new_ext(src.text, parser_options()).into_offset_iter() {
         let Event::Html(html) = event else { continue };
         let Some(parsed) = annotation::from_html(&html) else {
@@ -377,22 +377,34 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
         match parsed {
             Err(why) => report(format!("site annotation: {why}")),
             Ok(note) => match note.kind {
-                Kind::Replace if open.is_some() => {
-                    report("a replace inside another one: close the first with an end".to_string());
+                Kind::Replace | Kind::Widget if open.is_some() => {
+                    let (kind, _) = open.expect("an open region");
+                    report(if kind == note.kind {
+                        format!(
+                            "a {} inside another one: close the first with an end",
+                            kind.name()
+                        )
+                    } else {
+                        format!(
+                            "a {} inside a {}: close the first with an end",
+                            note.kind.name(),
+                            kind.name()
+                        )
+                    });
                 }
-                Kind::Replace => open = Some(range.start),
+                Kind::Replace | Kind::Widget => open = Some((note.kind, range.start)),
                 Kind::End if open.take().is_none() => {
-                    report("an end with no replace before it".to_string());
+                    report("an end with no replace or widget before it".to_string());
                 }
                 _ => {}
             },
         }
     }
-    if let Some(offset) = open {
+    if let Some((kind, offset)) = open {
         out.push(src.finding(
             offset,
             Rule::SiteAnnotation,
-            "a replace is never closed by an end".to_string(),
+            format!("a {} is never closed by an end", kind.name()),
         ));
     }
 }
@@ -619,14 +631,36 @@ mod tests {
         assert_eq!(
             out,
             [
-                "1:1: site-annotation: site annotation: unknown kind 'nope', expected one of page, figure, replace, end, alias",
-                "3:1: site-annotation: an end with no replace before it",
+                "1:1: site-annotation: site annotation: unknown kind 'nope', expected one of page, figure, replace, end, alias, widget",
+                "3:1: site-annotation: an end with no replace or widget before it",
                 "5:1: site-annotation: a replace is never closed by an end",
             ]
         );
         let nested = "<!-- site: replace src=a.png -->\n\n<!-- site: replace src=b.png -->\n\n<!-- site: end -->\n";
         assert!(findings(nested, &[Rule::SiteAnnotation])[0].contains("inside another one"));
         assert!(findings("<!-- toc -->\n", &[Rule::SiteAnnotation]).is_empty());
+    }
+
+    #[test]
+    fn widgets_are_closed_and_not_nested() {
+        let ok = "<!-- site: widget tabs -->\n\n### A\n\ntext\n\n<!-- site: end -->\n";
+        assert!(findings(ok, &[Rule::SiteAnnotation]).is_empty());
+        let open = "<!-- site: widget steps -->\n\n1. a\n";
+        assert_eq!(
+            findings(open, &[Rule::SiteAnnotation]),
+            ["1:1: site-annotation: a widget is never closed by an end"]
+        );
+        let nested =
+            "<!-- site: widget tabs -->\n\n<!-- site: widget steps -->\n\n<!-- site: end -->\n";
+        assert!(findings(nested, &[Rule::SiteAnnotation])[0].contains("inside another one"));
+        let mixed = "<!-- site: replace src=a.png -->\n\n<!-- site: widget tabs -->\n";
+        assert!(
+            findings(mixed, &[Rule::SiteAnnotation])
+                .iter()
+                .any(|f| f.contains("3:1: site-annotation: a widget inside a replace"))
+        );
+        let unknown = "<!-- site: widget dance -->\n";
+        assert!(findings(unknown, &[Rule::SiteAnnotation])[0].contains("unknown widget"));
     }
 
     #[test]
