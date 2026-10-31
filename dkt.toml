@@ -14,6 +14,10 @@ name = "Commands"
 url = "/commands/"
 section = "commands"
 
+[[nav]]
+name = "HAProxy demo"
+url = "/demos/haproxy/"
+
 [home]
 template = "index.html"
 

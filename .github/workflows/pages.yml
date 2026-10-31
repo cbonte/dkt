@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [master]
-    paths: ["dkt.toml", "docs/**", "themes/**", "src/**", ".github/workflows/pages.yml"]
+    paths: ["dkt.toml", "docs/**", "themes/**", "src/**", "demos/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cargo run --release -- site dkt.toml -o public
+      - run: cp -r demos public/demos
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

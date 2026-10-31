@@ -1,0 +1,23 @@
+/* The versions on the home page: a block each, with its status and the links to its documents. */
+:root {
+  --lts: #15803d; --lts-bg: #e7f5ec; --dev: #1d4ed8; --dev-bg: #e8eefc; --eol: #6b7280; --eol-bg: #eef0f3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --lts: #5fd08b; --lts-bg: #12281b; --dev: #7aa2ff; --dev-bg: #141d36; --eol: #9aa3b2; --eol-bg: #1d2128; }
+}
+:root[data-theme="dark"] { --lts: #5fd08b; --lts-bg: #12281b; --dev: #7aa2ff; --dev-bg: #141d36; --eol: #9aa3b2; --eol-bg: #1d2128; }
+
+.versions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; margin: 28px 0 36px; }
+.version { padding: 14px 18px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.version h2 { margin: 0 0 12px; padding: 0; border: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+.version p { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.version p a { padding: 3px 10px; font-size: 13.5px; white-space: nowrap; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.version p a:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+.version .status { font: 600 11px/1.7 var(--mono); letter-spacing: .08em; padding: 0 8px; border-radius: 6px; background: var(--eol-bg); color: var(--eol); }
+
+.version.lts .status { background: var(--lts-bg); color: var(--lts); }
+.version.dev { border-style: dashed; }
+.version.dev .status { background: var(--dev-bg); color: var(--dev); }
+.version.eol { background: transparent; }
+.version.eol h2 { color: var(--muted); font-weight: 600; }
+.version.eol p a { color: var(--soft); }

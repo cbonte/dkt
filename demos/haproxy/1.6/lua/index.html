@@ -1,0 +1,995 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lua API - HAProxy 1.6 - HAProxy documentation</title>
+<meta name="description" content="The documentation of HAProxy, one version after the other.">
+
+<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="/dkt/demos/haproxy/docs.css">
+<style>:root { --accent: #1d4ed8; --accent-bg: #e8eefc; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: #7aa2ff; --accent-bg: #141d36; --link: #7aa2ff; } }
+:root[data-theme="dark"] { --accent: #7aa2ff; --accent-bg: #141d36; --link: #7aa2ff; }
+</style>
+
+</head>
+<body>
+<header class="top"><div class="bar">
+<a class="brand" href="/dkt/demos/haproxy/"><b>HAProxy documentation</b></a>
+<nav><a href="/dkt/demos/haproxy/">Home</a><a href="/dkt/demos/haproxy/3.4/intro/">Starter Guide</a><a href="/dkt/demos/haproxy/3.4/configuration/">Configuration Manual</a><a href="/dkt/demos/haproxy/3.4/management/">Management Guide</a><a href="/dkt/demos/haproxy/3.4/lua/">Lua API</a></nav>
+<button type="button" class="search-open" aria-label="Search the titles" hidden><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Search</span><kbd>/</kbd></button>
+
+<button type="button" class="icon theme-toggle" aria-label="Switch theme" aria-pressed="false">
+<svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+<svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
+</button>
+</div></header>
+
+
+
+<div class="layout has-side">
+
+<aside class="side">
+<label class="version">Version <select aria-label="Version of the documentation" onchange="window.location.href = this.value"><option value="/dkt/demos/haproxy/3.5/lua/">3.5 (development)</option><option value="/dkt/demos/haproxy/3.4/lua/">3.4</option><option value="/dkt/demos/haproxy/3.3/lua/">3.3</option><option value="/dkt/demos/haproxy/3.2/lua/">3.2</option><option value="/dkt/demos/haproxy/3.1/lua/">3.1</option><option value="/dkt/demos/haproxy/3.0/lua/">3.0</option><option value="/dkt/demos/haproxy/2.9/lua/">2.9</option><option value="/dkt/demos/haproxy/2.8/lua/">2.8</option><option value="/dkt/demos/haproxy/2.7/lua/">2.7</option><option value="/dkt/demos/haproxy/2.6/lua/">2.6</option><option value="/dkt/demos/haproxy/2.5/lua/">2.5</option><option value="/dkt/demos/haproxy/2.4/lua/">2.4</option><option value="/dkt/demos/haproxy/2.3/lua/">2.3</option><option value="/dkt/demos/haproxy/2.2/lua/">2.2</option><option value="/dkt/demos/haproxy/2.1/lua/">2.1</option><option value="/dkt/demos/haproxy/2.0/lua/">2.0</option><option value="/dkt/demos/haproxy/1.9/lua/">1.9</option><option value="/dkt/demos/haproxy/1.8/lua/">1.8</option><option value="/dkt/demos/haproxy/1.7/lua/">1.7</option><option value="/dkt/demos/haproxy/1.6/lua/" selected>1.6</option></select></label><b>HAProxy 1.6</b><a href="/dkt/demos/haproxy/1.6/intro/" title="Starter Guide">Starter Guide</a><a href="/dkt/demos/haproxy/1.6/configuration/" title="Configuration Manual">Configuration Manual</a><a href="/dkt/demos/haproxy/1.6/management/" title="Management Guide">Management Guide</a><a href="/dkt/demos/haproxy/1.6/lua/" title="Lua API" aria-current="page">Lua API</a></aside>
+
+<main class="prose">
+<div class="crumbs">HAProxy 1.6 <span aria-hidden="true">/</span> Lua API</div>
+<h1 id="lua-api">Lua API</h1>
+<h2 id="how-lua-runs-in-haproxy"><a href="#how-lua-runs-in-haproxy">How Lua runs in HAProxy</a></h2>
+<h3 id="haproxy-lua-running-contexts"><a href="#haproxy-lua-running-contexts">HAProxy Lua running contexts</a></h3>
+<p>The Lua code executed in HAProxy can be processed in 2 main modes. The first one is the <strong>initialisation mode</strong>, and the second is the <strong>runtime mode</strong>.</p>
+<ul>
+<li>In the <strong>initialisation mode</strong>, we can perform DNS solves, but we cannot perform socket I/O. In this initialisation mode, HAProxy still blocked during the execution of the Lua program.</li>
+<li>In the <strong>runtime mode</strong>, we cannot perform DNS solves, but we can use sockets. The execution of the Lua code is multiplexed with the requests processing, so the Lua code seems to be run in blocking, but it is not the case.</li>
+</ul>
+<p>The Lua code is loaded in one or more files. These files contains main code and functions. Lua have 6 execution context.</p>
+<ol>
+<li>
+<p>The Lua file <strong>body context</strong>. It is executed during the load of the Lua file in the HAProxy <code>[global]</code> section with the directive <code>lua-load</code>. It is executed in initialisation mode. This section is use for configuring Lua bindings in HAProxy.</p>
+</li>
+<li>
+<p>The Lua <strong>init context</strong>. It is a Lua function executed just after the HAProxy configuration parsing. The execution is in initialisation mode. In this context the HAProxy environment are already initialized. It is useful to check configuration, or initializing socket connections or tasks. These functions are declared in the body context with the Lua function <code>core.register_init()</code>. The prototype of the function is a simple function without return value and without parameters, like this: <code>function fcn()</code>.</p>
+</li>
+<li>
+<p>The Lua <strong>task context</strong>. It is a Lua function executed after the start of the HAProxy scheduler, and just after the declaration of the task with the Lua function <code>core.register_task()</code>. This context can be concurrent with the traffic processing. It is executed in runtime mode. The prototype of the function is a simple function without return value and without parameters, like this: <code>function fcn()</code>.</p>
+</li>
+<li>
+<p>The <strong>action context</strong>. It is a Lua function conditionally executed. These actions are registered by the Lua directives "<code>core.register_action()</code>". The prototype of the Lua called function is a function with doesn't returns anything and that take an object of class TXN as entry. <code>function fcn(txn)</code>.</p>
+</li>
+<li>
+<p>The <strong>sample-fetch context</strong>. This function takes a TXN object as entry argument and returns a string. These types of function cannot execute any blocking function. They are useful to aggregate some of original HAProxy sample-fetches and return the result. The prototype of the function is <code>function string fcn(txn)</code>. These functions can be registered with the Lua function <code>core.register_fetches()</code>. Each declared sample-fetch is prefixed by the string "lua.".</p>
+<p><strong>NOTE</strong>: It is possible that this function cannot found the required data in the original HAProxy sample-fetches, in this case, it cannot return the result. This case is not yet supported</p>
+</li>
+<li>
+<p>The <strong>converter context</strong>. It is a Lua function that takes a string as input and returns another string as output. These types of function are stateless, it cannot access to any context. They don't execute any blocking function. The call prototype is <code>function string fcn(string)</code>. This function can be registered with the Lua function <code>core.register_converters()</code>. Each declared converter is prefixed by the string "lua.".</p>
+</li>
+</ol>
+<h3 id="haproxy-lua-hello-world"><a href="#haproxy-lua-hello-world">HAProxy Lua Hello world</a></h3>
+<p>HAProxy configuration file (<code>hello_world.conf</code>):</p>
+<pre><code class="language-text">global
+   lua-load hello_world.lua
+
+listen proxy
+   bind 127.0.0.1:10001
+   tcp-request inspect-delay 1s
+   tcp-request content use-service lua.hello_world
+</code></pre>
+<p>HAProxy Lua file (<code>hello_world.lua</code>):</p>
+<pre><code class="language-lua">core.register_service("hello_world", "tcp", function(applet)
+   applet:send("hello world\n")
+end)
+</code></pre>
+<p>How to start HAProxy for testing this configuration:</p>
+<pre><code class="language-text">./haproxy -f hello_world.conf
+</code></pre>
+<p>On other terminal, you can test with telnet:</p>
+<pre><code class="language-text">#:~ telnet 127.0.0.1 10001
+hello world
+</code></pre>
+<h2 id="core-class"><a href="#core-class">Core class</a></h2>
+<h3 id="core"><a href="#core"><code>core</code></a></h3>
+<p>The "core" class contains all the HAProxy core functions. These function are useful for the controlling the execution flow, registering hooks, manipulating global maps or ACL, ...</p>
+<p>"core" class is basically provided with HAProxy. No <code>require</code> line is required to uses these function.</p>
+<p>The "core" class is static, it is not possible to create a new object of this type.</p>
+<h3 id="coreemerg"><a href="#coreemerg"><code>core.emerg</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "emergency" (0).</p>
+<h3 id="corealert"><a href="#corealert"><code>core.alert</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "alert" (1).</p>
+<h3 id="corecrit"><a href="#corecrit"><code>core.crit</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "critical" (2).</p>
+<h3 id="coreerr"><a href="#coreerr"><code>core.err</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "error" (3).</p>
+<h3 id="corewarning"><a href="#corewarning"><code>core.warning</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "warning" (4).</p>
+<h3 id="corenotice"><a href="#corenotice"><code>core.notice</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "notice" (5).</p>
+<h3 id="coreinfo"><a href="#coreinfo"><code>core.info</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "info" (6).</p>
+<h3 id="coredebug"><a href="#coredebug"><code>core.debug</code></a></h3>
+<p>This attribute is an integer, it contains the value of the loglevel "debug" (7).</p>
+<h3 id="corelogloglevel-msg"><a href="#corelogloglevel-msg"><code>core.log(loglevel, msg)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<p>This function sends a log. The log is sent, according with the HAProxy configuration file, on the default syslog server if it is configured and on the stderr if it is allowed.</p>
+<ul>
+<li><strong>loglevel</strong> (<em>integer</em>): Is the log level asociated with the message. It is a number between 0 and 7.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: core.emerg, core.alert, core.crit, core.err, core.warning, core.notice, core.info, core.debug (log level definitions)</li>
+<li><strong>See</strong>: code.Debug</li>
+<li><strong>See</strong>: core.Info</li>
+<li><strong>See</strong>: core.Warning</li>
+<li><strong>See</strong>: core.Alert</li>
+</ul>
+<h3 id="coredebugmsg"><a href="#coredebugmsg"><code>core.Debug(msg)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: log</li>
+</ul>
+<p>Does the same job than:</p>
+<pre><code class="language-lua">function Debug(msg)
+        core.log(core.debug, msg)
+end
+</code></pre>
+<h3 id="coreinfomsg"><a href="#coreinfomsg"><code>core.Info(msg)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: log</li>
+</ul>
+<pre><code class="language-lua">function Info(msg)
+        core.log(core.info, msg)
+end
+</code></pre>
+<h3 id="corewarningmsg"><a href="#corewarningmsg"><code>core.Warning(msg)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: log</li>
+</ul>
+<pre><code class="language-lua">function Warning(msg)
+        core.log(core.warning, msg)
+end
+</code></pre>
+<h3 id="corealertmsg"><a href="#corealertmsg"><code>core.Alert(msg)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: log</li>
+</ul>
+<pre><code class="language-lua">function Alert(msg)
+        core.log(core.alert, msg)
+end
+</code></pre>
+<h3 id="coreadd_aclfilename-key"><a href="#coreadd_aclfilename-key"><code>core.add_acl(filename, key)</code></a></h3>
+<p><strong>context</strong>: init, task, action, sample-fetch, converter</p>
+<p>Add the ACL <em>key</em> in the ACLs list referenced by the file <em>filename</em>.</p>
+<ul>
+<li><strong>filename</strong> (<em>string</em>): the filename that reference the ACL entries.</li>
+<li><strong>key</strong> (<em>string</em>): the key which will be added.</li>
+</ul>
+<h3 id="coredel_aclfilename-key"><a href="#coredel_aclfilename-key"><code>core.del_acl(filename, key)</code></a></h3>
+<p><strong>context</strong>: init, task, action, sample-fetch, converter</p>
+<p>Delete the ACL entry referenced by the key <em>key</em> in the list of ACLs referenced by <em>filename</em>.</p>
+<ul>
+<li><strong>filename</strong> (<em>string</em>): the filename that reference the ACL entries.</li>
+<li><strong>key</strong> (<em>string</em>): the key which will be deleted.</li>
+</ul>
+<h3 id="coredel_mapfilename-key"><a href="#coredel_mapfilename-key"><code>core.del_map(filename, key)</code></a></h3>
+<p><strong>context</strong>: init, task, action, sample-fetch, converter</p>
+<p>Delete the map entry indexed with the specified key in the list of maps referenced by his filename.</p>
+<ul>
+<li><strong>filename</strong> (<em>string</em>): the filename that reference the map entries.</li>
+<li><strong>key</strong> (<em>string</em>): the key which will be deleted.</li>
+</ul>
+<h3 id="coremsleepmilliseconds"><a href="#coremsleepmilliseconds"><code>core.msleep(milliseconds)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action</p>
+<p>The <code>core.msleep()</code> stops the Lua execution between specified milliseconds.</p>
+<ul>
+<li><strong>milliseconds</strong> (<em>integer</em>): the required milliseconds.</li>
+</ul>
+<h3 id="coreregister_actionname-actions-func"><a href="#coreregister_actionname-actions-func"><code>core.register_action(name, actions, func)</code></a></h3>
+<p><strong>context</strong>: body</p>
+<p>Register a Lua function executed as action. All the registered action can be used in HAProxy with the prefix "lua.". An action gets a TXN object class as input.</p>
+<ul>
+<li><strong>name</strong> (<em>string</em>): is the name of the converter.</li>
+<li><strong>actions</strong> (<em>table</em>): is a table of string describing the HAProxy actions who want to register to. The expected actions are 'tcp-req', 'tcp-res', 'http-req' or 'http-res'.</li>
+<li><strong>func</strong> (<em>function</em>): is the Lua function called to work as converter.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">function(txn)
+</code></pre>
+<blockquote>
+<ul>
+<li><strong>txn</strong> (<em>class TXN</em>): this is a TXN object used for manipulating the current request or TCP stream.</li>
+</ul>
+<p>Here, an exemple of action registration. the action juste send an 'Hello world' in the logs.</p>
+</blockquote>
+<pre><code class="language-lua">core.register_action("hello-world", { "tcp-req", "http-req" }, function(txn)
+   txn:Info("Hello world")
+end)
+</code></pre>
+<blockquote>
+<p>This example code is used in HAproxy configuration like this:</p>
+</blockquote>
+<pre><code class="language-text">frontend tcp_frt
+  mode tcp
+  tcp-request content lua.hello-world
+
+frontend http_frt
+  mode http
+  http-request lua.hello-world
+</code></pre>
+<h3 id="coreregister_convertersname-func"><a href="#coreregister_convertersname-func"><code>core.register_converters(name, func)</code></a></h3>
+<p><strong>context</strong>: body</p>
+<p>Register a Lua function executed as converter. All the registered converters can be used in HAProxy with the prefix "lua.". An converter get a string as input and return a string as output. The registered function can take up to 9 values as parameter. All the value are strings.</p>
+<ul>
+<li><strong>name</strong> (<em>string</em>): is the name of the converter.</li>
+<li><strong>func</strong> (<em>function</em>): is the Lua function called to work as converter.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">function(str, [p1 [, p2 [, ... [, p5]]]])
+</code></pre>
+<blockquote>
+<ul>
+<li><strong>str</strong> (<em>string</em>): this is the input value automatically converted in string.</li>
+<li><strong>p1</strong> .. <strong>p5</strong> (<em>string</em>): this is a list of string arguments declared in the haroxy configuration file. The number of arguments doesn't exceed 5. The order and the nature of these is conventionally choose by the developper.</li>
+</ul>
+</blockquote>
+<h3 id="coreregister_fetchesname-func"><a href="#coreregister_fetchesname-func"><code>core.register_fetches(name, func)</code></a></h3>
+<p><strong>context</strong>: body</p>
+<p>Register a Lua function executed as sample fetch. All the registered sample fetchs can be used in HAProxy with the prefix "lua.". A Lua sample fetch return a string as output. The registered function can take up to 9 values as parameter. All the value are strings.</p>
+<ul>
+<li><strong>name</strong> (<em>string</em>): is the name of the converter.</li>
+<li><strong>func</strong> (<em>function</em>): is the Lua function called to work as sample fetch.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">string function(txn, [p1 [, p2 [, ... [, p5]]]])
+</code></pre>
+<blockquote>
+<ul>
+<li><strong>txn</strong> (<em>class txn</em>): this is the txn object associated with the current request.</li>
+<li><strong>p1</strong> .. <strong>p5</strong> (<em>string</em>): this is a list of string arguments declared in the haroxy configuration file. The number of arguments doesn't exceed 5. The order and the nature of these is conventionally choose by the developper.</li>
+<li><strong>Returns</strong>: A string containing some data, ot nil if the value cannot be returned now.</li>
+</ul>
+<p>lua example code:</p>
+</blockquote>
+<pre><code class="language-lua">core.register_fetches("hello", function(txn)
+    return "hello"
+end)
+</code></pre>
+<blockquote>
+<p>HAProxy example configuration:</p>
+</blockquote>
+<pre><code class="language-text">frontend example
+   http-request redirect location /%[lua.hello]
+</code></pre>
+<h3 id="coreregister_servicename-mode-func"><a href="#coreregister_servicename-mode-func"><code>core.register_service(name, mode, func)</code></a></h3>
+<p><strong>context</strong>: body</p>
+<p>Register a Lua function executed as a service. All the registered service can be used in HAProxy with the prefix "lua.". A service gets an object class as input according with the required mode.</p>
+<ul>
+<li><strong>name</strong> (<em>string</em>): is the name of the converter.</li>
+<li><strong>mode</strong> (<em>string</em>): is string describing the required mode. Only 'tcp' or 'http' are allowed.</li>
+<li><strong>func</strong> (<em>function</em>): is the Lua function called to work as converter.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">function(applet)
+</code></pre>
+<blockquote>
+<ul>
+<li><strong>txn</strong> (<em>class AppletTCP</em>) or (<em>class AppletHTTP</em>): this is an object used for manipulating the current HTTP request or TCP stream.</li>
+</ul>
+<p>Here, an exemple of service registration. the service just send an 'Hello world' as an http response.</p>
+</blockquote>
+<pre><code class="language-lua">core.register_service("hello-world", "http" }, function(applet)
+   local response = "Hello World !"
+   applet:set_status(200)
+   applet:add_header("content-length", string.len(response))
+   applet:add_header("content-type", "text/plain")
+   applet:start_response()
+   applet:send(response)
+end)
+</code></pre>
+<blockquote>
+<p>This example code is used in HAproxy configuration like this:</p>
+</blockquote>
+<pre><code class="language-text">frontend example
+   http-request use-service lua.hello-world
+</code></pre>
+<h3 id="coreregister_initfunc"><a href="#coreregister_initfunc"><code>core.register_init(func)</code></a></h3>
+<p><strong>context</strong>: body</p>
+<p>Register a function executed after the configuration parsing. This is useful to check any parameters.</p>
+<ul>
+<li><strong>func</strong> (<em>fuction</em>): is the Lua function called to work as initializer.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">function()
+</code></pre>
+<blockquote>
+<p>It takes no input, and no output is expected.</p>
+</blockquote>
+<h3 id="coreregister_taskfunc"><a href="#coreregister_taskfunc"><code>core.register_task(func)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<p>Register and start independent task. The task is started when the HAProxy main scheduler starts. For example this type of tasks can be executed to perform complex health checks.</p>
+<ul>
+<li><strong>func</strong> (<em>fuction</em>): is the Lua function called to work as initializer.</li>
+</ul>
+<p>The prototype of the Lua function used as argument is:</p>
+<pre><code class="language-lua">function()
+</code></pre>
+<blockquote>
+<p>It takes no input, and no output is expected.</p>
+</blockquote>
+<h3 id="coreset_nicenice"><a href="#coreset_nicenice"><code>core.set_nice(nice)</code></a></h3>
+<p><strong>context</strong>: task, action, sample-fetch, converter</p>
+<p>Change the nice of the current task or current session.</p>
+<ul>
+<li><strong>nice</strong> (<em>integer</em>): the nice value, it must be between -1024 and 1024.</li>
+</ul>
+<h3 id="coreset_mapfilename-key-value"><a href="#coreset_mapfilename-key-value"><code>core.set_map(filename, key, value)</code></a></h3>
+<p><strong>context</strong>: init, task, action, sample-fetch, converter</p>
+<p>set the value <em>value</em> associated to the key <em>key</em> in the map referenced by <em>filename</em>.</p>
+<h3 id="coresleepint-seconds"><a href="#coresleepint-seconds"><code>core.sleep(int seconds)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action</p>
+<p>The <code>core.sleep()</code> functions stop the Lua execution between specified seconds.</p>
+<ul>
+<li><strong>seconds</strong> (<em>integer</em>): the required seconds.</li>
+</ul>
+<h3 id="coretcp"><a href="#coretcp"><code>core.tcp()</code></a></h3>
+<p><strong>context</strong>: init, task, action</p>
+<p>This function returns a new object of a <em>socket</em> class.</p>
+<ul>
+<li><strong>Returns</strong>: A socket class object.</li>
+</ul>
+<h3 id="coredonedata"><a href="#coredonedata"><code>core.done(data)</code></a></h3>
+<p><strong>context</strong>: body, init, task, action, sample-fetch, converter</p>
+<ul>
+<li><strong>data</strong> (<em>any</em>): Return some data for the caller. It is useful with sample-fetches and sample-converters.</li>
+</ul>
+<p>Immediately stops the current Lua execution and returns to the caller which may be a sample fetch, a converter or an action and returns the specified value (ignored for actions). It is used when the LUA process finishes its work and wants to give back the control to HAProxy without executing the remaining code. It can be seen as a multi-level "return".</p>
+<h3 id="coreyield"><a href="#coreyield"><code>core.yield()</code></a></h3>
+<p><strong>context</strong>: task, action, sample-fetch, converter</p>
+<p>Give back the hand at the HAProxy scheduler. It is used when the LUA processing consumes a lot of processing time.</p>
+<h2 id="fetches-class"><a href="#fetches-class">Fetches class</a></h2>
+<h3 id="fetches"><a href="#fetches"><code>Fetches</code></a></h3>
+<p>This class contains a lot of internal HAProxy sample fetches. See the HAProxy "configuration.txt" documentation for more information about her usage. they are the chapters 7.3.2 to 7.3.6.</p>
+<ul>
+<li><strong>See</strong>: TXN.f</li>
+<li><strong>See</strong>: TXN.sf</li>
+</ul>
+<p>Fetches are useful for:</p>
+<ul>
+<li>get system time,</li>
+<li>get environment variable,</li>
+<li>get random numbers,</li>
+<li>known backend status like the number of users in queue or the number of connections established,</li>
+<li>client information like ip source or destination,</li>
+<li>deal with stick tables,</li>
+<li>Established SSL informations,</li>
+<li>HTTP information like headers or method.</li>
+</ul>
+<pre><code class="language-lua">function action(txn)
+        -- Get source IP
+        local clientip = txn.f:src()
+end
+</code></pre>
+<h2 id="converters-class"><a href="#converters-class">Converters class</a></h2>
+<h3 id="converters"><a href="#converters"><code>Converters</code></a></h3>
+<p>This class contains a lot of internal HAProxy sample converters. See the HAProxy documentation "configuration.txt" for more information about her usage. Its the chapter 7.3.1.</p>
+<ul>
+<li><strong>See</strong>: TXN.c</li>
+<li><strong>See</strong>: TXN.sc</li>
+</ul>
+<p>Converters provides statefull transformation. They are useful for:</p>
+<ul>
+<li>converting input to base64,</li>
+<li>applying hash on input string (djb2, crc32, sdbm, wt6),</li>
+<li>format date,</li>
+<li>json escape,</li>
+<li>extracting prefered language comparing two lists,</li>
+<li>turn to lower or upper chars,</li>
+<li>deal with stick tables.</li>
+</ul>
+<h2 id="channel-class"><a href="#channel-class">Channel class</a></h2>
+<h3 id="channel"><a href="#channel"><code>Channel</code></a></h3>
+<p>HAProxy uses two buffers for the processing of the requests. The first one is used with the request data (from the client to the server) and the second is used for the response data (from the server to the client).</p>
+<p>Each buffer contains two types of data. The first type is the incoming data waiting for a processing. The second part is the outgoing data already processed. Usually, the incoming data is processed, after it is tagged as outgoing data, and finally it is sent. The following functions provides tools for manipulating these data in a buffer.</p>
+<p>The following diagram shows where the channel class function are applied.</p>
+<p><strong>Warning</strong>: It is not possible to read from the response in request action, and it is not possible to read for the request channel in response action.</p>
+<p><img src="/dkt/demos/haproxy/1.6/_static/channel.png" alt="channel" /></p>
+<h3 id="channeldupchannel"><a href="#channeldupchannel"><code>Channel.dup(channel)</code></a></h3>
+<p>This function returns a string that contain the entire buffer. The data is not remove from the buffer and can be reprocessed later.</p>
+<p>If the buffer cant receive more data, a 'nil' value is returned.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>Returns</strong>: a string containig all the avalaible data or nil.</li>
+</ul>
+<h3 id="channelgetchannel"><a href="#channelgetchannel"><code>Channel.get(channel)</code></a></h3>
+<p>This function returns a string that contain the entire buffer. The data is consumed from the buffer.</p>
+<p>If the buffer cant receive more data, a 'nil' value is returned.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>Returns</strong>: a string containig all the avalaible data or nil.</li>
+</ul>
+<h3 id="channelgetlinechannel"><a href="#channelgetlinechannel"><code>Channel.getline(channel)</code></a></h3>
+<p>This function returns a string that contain the first line of the buffer. The data is consumed. If the data returned doesn't contains a final 'n' its assumed than its the last available data in the buffer.</p>
+<p>If the buffer cant receive more data, a 'nil' value is returned.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>Returns</strong>: a string containing the available line or nil.</li>
+</ul>
+<h3 id="channelsetchannel-string"><a href="#channelsetchannel-string"><code>Channel.set(channel, string)</code></a></h3>
+<p>This function replace the content of the buffer by the string. The function returns the copied length, otherwise, it returns -1.</p>
+<p>The data set with this function are not send. They wait for the end of HAProxy processing, so the buffer can be full.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>string</strong> (<em>string</em>): The data which will sent.</li>
+<li><strong>Returns</strong>: an integer containing the amount of butes copyed or -1.</li>
+</ul>
+<h3 id="channelappendchannel-string"><a href="#channelappendchannel-string"><code>Channel.append(channel, string)</code></a></h3>
+<p>This function append the string argument to the content of the buffer. The function returns the copied length, otherwise, it returns -1.</p>
+<p>The data set with this function are not send. They wait for the end of HAProxy processing, so the buffer can be full.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>string</strong> (<em>string</em>): The data which will sent.</li>
+<li><strong>Returns</strong>: an integer containing the amount of butes copyed or -1.</li>
+</ul>
+<h3 id="channelsendchannel-string"><a href="#channelsendchannel-string"><code>Channel.send(channel, string)</code></a></h3>
+<p>This function required immediate send of the data. Unless if the connection is close, the buffer is regularly flushed and all the string can be sent.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>string</strong> (<em>string</em>): The data which will sent.</li>
+<li><strong>Returns</strong>: an integer containing the amount of butes copyed or -1.</li>
+</ul>
+<h3 id="channelget_in_lengthchannel"><a href="#channelget_in_lengthchannel"><code>Channel.get_in_length(channel)</code></a></h3>
+<p>This function returns the length of the input part of the buffer.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>Returns</strong>: an integer containing the amount of avalaible bytes.</li>
+</ul>
+<h3 id="channelget_out_lengthchannel"><a href="#channelget_out_lengthchannel"><code>Channel.get_out_length(channel)</code></a></h3>
+<p>This function returns the length of the output part of the buffer.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>Returns</strong>: an integer containing the amount of avalaible bytes.</li>
+</ul>
+<h3 id="channelforwardchannel-int"><a href="#channelforwardchannel-int"><code>Channel.forward(channel, int)</code></a></h3>
+<p>This function transfer bytes from the input part of the buffer to the output part.</p>
+<ul>
+<li><strong>channel</strong> (<em>class_channel</em>): The manipulated Channel.</li>
+<li><strong>int</strong> (<em>integer</em>): The amount of data which will be forwarded.</li>
+</ul>
+<h2 id="http-class"><a href="#http-class">HTTP class</a></h2>
+<h3 id="http"><a href="#http"><code>HTTP</code></a></h3>
+<p>This class contain all the HTTP manipulation functions.</p>
+<h3 id="httpreq_get_headershttp"><a href="#httpreq_get_headershttp"><code>HTTP.req_get_headers(http)</code></a></h3>
+<p>Returns an array containing all the request headers.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>Returns</strong>: array of headers.</li>
+<li><strong>See</strong>: HTTP.res_get_headers()</li>
+</ul>
+<h3 id="httpres_get_headershttp"><a href="#httpres_get_headershttp"><code>HTTP.res_get_headers(http)</code></a></h3>
+<p>Returns an array containing all the response headers.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>Returns</strong>: array of headers.</li>
+<li><strong>See</strong>: HTTP.req_get_headers()</li>
+</ul>
+<h3 id="httpreq_add_headerhttp-name-value"><a href="#httpreq_add_headerhttp-name-value"><code>HTTP.req_add_header(http, name, value)</code></a></h3>
+<p>Appends an HTTP header field in the request whose name is specified in "name" and whose value is defined in "value".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>value</strong> (<em>string</em>): The header value.</li>
+<li><strong>See</strong>: HTTP.res_add_header()</li>
+</ul>
+<h3 id="httpres_add_headerhttp-name-value"><a href="#httpres_add_headerhttp-name-value"><code>HTTP.res_add_header(http, name, value)</code></a></h3>
+<p>appends an HTTP header field in the response whose name is specified in "name" and whose value is defined in "value".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>value</strong> (<em>string</em>): The header value.</li>
+<li><strong>See</strong>: HTTP.req_add_header()</li>
+</ul>
+<h3 id="httpreq_del_headerhttp-name"><a href="#httpreq_del_headerhttp-name"><code>HTTP.req_del_header(http, name)</code></a></h3>
+<p>Removes all HTTP header fields in the request whose name is specified in "name".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>See</strong>: HTTP.res_del_header()</li>
+</ul>
+<h3 id="httpres_del_headerhttp-name"><a href="#httpres_del_headerhttp-name"><code>HTTP.res_del_header(http, name)</code></a></h3>
+<p>Removes all HTTP header fields in the response whose name is specified in "name".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>See</strong>: HTTP.req_del_header()</li>
+</ul>
+<h3 id="httpreq_set_headerhttp-name-value"><a href="#httpreq_set_headerhttp-name-value"><code>HTTP.req_set_header(http, name, value)</code></a></h3>
+<p>This variable replace all occurence of all header "name", by only one containing the "value".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>value</strong> (<em>string</em>): The header value.</li>
+<li><strong>See</strong>: HTTP.res_set_header()</li>
+</ul>
+<p>This function does the same work as the folowwing code:</p>
+<pre><code class="language-lua">function fcn(txn)
+   TXN.http:req_del_header("header")
+   TXN.http:req_add_header("header", "value")
+end
+</code></pre>
+<h3 id="httpres_set_headerhttp-name-value"><a href="#httpres_set_headerhttp-name-value"><code>HTTP.res_set_header(http, name, value)</code></a></h3>
+<p>This variable replace all occurence of all header "name", by only one containing the "value".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>value</strong> (<em>string</em>): The header value.</li>
+<li><strong>See</strong>: HTTP.req_rep_header()</li>
+</ul>
+<h3 id="httpreq_rep_headerhttp-name-regex-replace"><a href="#httpreq_rep_headerhttp-name-regex-replace"><code>HTTP.req_rep_header(http, name, regex, replace)</code></a></h3>
+<p>Matches the regular expression in all occurrences of header field "name" according to "regex", and replaces them with the "replace" argument. The replacement value can contain back references like 1, 2, ... This function works with the request.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>regex</strong> (<em>string</em>): The match regular expression.</li>
+<li><strong>replace</strong> (<em>string</em>): The replacement value.</li>
+<li><strong>See</strong>: HTTP.res_rep_header()</li>
+</ul>
+<h3 id="httpres_rep_headerhttp-name-regex-string"><a href="#httpres_rep_headerhttp-name-regex-string"><code>HTTP.res_rep_header(http, name, regex, string)</code></a></h3>
+<p>Matches the regular expression in all occurrences of header field "name" according to "regex", and replaces them with the "replace" argument. The replacement value can contain back references like 1, 2, ... This function works with the request.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>regex</strong> (<em>string</em>): The match regular expression.</li>
+<li><strong>replace</strong> (<em>string</em>): The replacement value.</li>
+<li><strong>See</strong>: HTTP.req_replace_header()</li>
+</ul>
+<h3 id="httpreq_replace_valuehttp-name-regex-replace"><a href="#httpreq_replace_valuehttp-name-regex-replace"><code>HTTP.req_replace_value(http, name, regex, replace)</code></a></h3>
+<p>Works like "HTTP.req_replace_header()" except that it matches the regex against every comma-delimited value of the header field "name" instead of the entire header.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>regex</strong> (<em>string</em>): The match regular expression.</li>
+<li><strong>replace</strong> (<em>string</em>): The replacement value.</li>
+<li><strong>See</strong>: HTTP.req_replace_header()</li>
+<li><strong>See</strong>: HTTP.res_replace_value()</li>
+</ul>
+<h3 id="httpres_replace_valuehttp-name-regex-replace"><a href="#httpres_replace_valuehttp-name-regex-replace"><code>HTTP.res_replace_value(http, name, regex, replace)</code></a></h3>
+<p>Works like "HTTP.res_replace_header()" except that it matches the regex against every comma-delimited value of the header field "name" instead of the entire header.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>name</strong> (<em>string</em>): The header name.</li>
+<li><strong>regex</strong> (<em>string</em>): The match regular expression.</li>
+<li><strong>replace</strong> (<em>string</em>): The replacement value.</li>
+<li><strong>See</strong>: HTTP.res_replace_header()</li>
+<li><strong>See</strong>: HTTP.req_replace_value()</li>
+</ul>
+<h3 id="httpreq_set_methodhttp-method"><a href="#httpreq_set_methodhttp-method"><code>HTTP.req_set_method(http, method)</code></a></h3>
+<p>Rewrites the request method with the parameter "method".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>method</strong> (<em>string</em>): The new method.</li>
+</ul>
+<h3 id="httpreq_set_pathhttp-path"><a href="#httpreq_set_pathhttp-path"><code>HTTP.req_set_path(http, path)</code></a></h3>
+<p>Rewrites the request path with the "path" parameter.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>path</strong> (<em>string</em>): The new path.</li>
+</ul>
+<h3 id="httpreq_set_queryhttp-query"><a href="#httpreq_set_queryhttp-query"><code>HTTP.req_set_query(http, query)</code></a></h3>
+<p>Rewrites the request's query string which appears after the first question mark ("?") with the parameter "query".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>query</strong> (<em>string</em>): The new query.</li>
+</ul>
+<h3 id="httpreq_set_urihttp-uri"><a href="#httpreq_set_urihttp-uri"><code>HTTP.req_set_uri(http, uri)</code></a></h3>
+<p>Rewrites the request URI with the parameter "uri".</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>uri</strong> (<em>string</em>): The new uri.</li>
+</ul>
+<h3 id="httpres_set_statushttp-status"><a href="#httpres_set_statushttp-status"><code>HTTP.res_set_status(http, status)</code></a></h3>
+<p>Rewrites the response status code with the parameter "code". Note that the reason is automatically adapted to the new code.</p>
+<ul>
+<li><strong>http</strong> (<em>class_http</em>): The related http object.</li>
+<li><strong>status</strong> (<em>integer</em>): The new response status code.</li>
+</ul>
+<h2 id="txn-class"><a href="#txn-class">TXN class</a></h2>
+<h3 id="txn"><a href="#txn"><code>TXN</code></a></h3>
+<p>The txn class contain all the functions relative to the http or tcp transaction (Note than a tcp stream is the same than a tcp transaction, but an HTTP transaction is not the same than a tcp stream).</p>
+<p>The usage of this class permits to retrieve data from the requests, alter it and forward it.</p>
+<p>All the functions provided by this class are available in the context <strong>sample-fetches</strong> and <strong>actions</strong>.</p>
+<h3 id="txnc"><a href="#txnc"><code>TXN.c</code></a></h3>
+<p>This attribute contains a Converters class object.</p>
+<h3 id="txnsc"><a href="#txnsc"><code>TXN.sc</code></a></h3>
+<p>This attribute contains a Converters class object. The functions of this object returns always a string.</p>
+<h3 id="txnf"><a href="#txnf"><code>TXN.f</code></a></h3>
+<p>This attribute contains a Fetches class object.</p>
+<h3 id="txnsf"><a href="#txnsf"><code>TXN.sf</code></a></h3>
+<p>This attribute contains a Fetches class object. The functions of this object returns always a string.</p>
+<h3 id="txnreq"><a href="#txnreq"><code>TXN.req</code></a></h3>
+<p>This attribute contains a channel class object for the request buffer.</p>
+<h3 id="txnres"><a href="#txnres"><code>TXN.res</code></a></h3>
+<p>This attribute contains a channel class object for the response buffer.</p>
+<h3 id="txnhttp"><a href="#txnhttp"><code>TXN.http</code></a></h3>
+<p>This attribute contains an HTTP class object. It is avalaible only if the proxy has the "mode http" enabled.</p>
+<h3 id="txnlogtxn-loglevel-msg"><a href="#txnlogtxn-loglevel-msg"><code>TXN.log(TXN, loglevel, msg)</code></a></h3>
+<p>This function sends a log. The log is sent, according with the HAProxy configuration file, on the default syslog server if it is configured and on the stderr if it is allowed.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>loglevel</strong> (<em>integer</em>): Is the log level asociated with the message. It is a number between 0 and 7.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: core.emerg, core.alert, core.crit, core.err, core.warning, core.notice, core.info, core.debug (log level definitions)</li>
+<li><strong>See</strong>: TXN.deflog</li>
+<li><strong>See</strong>: TXN.Debug</li>
+<li><strong>See</strong>: TXN.Info</li>
+<li><strong>See</strong>: TXN.Warning</li>
+<li><strong>See</strong>: TXN.Alert</li>
+</ul>
+<h3 id="txndeflogtxn-msg"><a href="#txndeflogtxn-msg"><code>TXN.deflog(TXN, msg)</code></a></h3>
+<p>Sends a log line with the default loglevel for the proxy ssociated with the transaction.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: TXN.log</li>
+</ul>
+<h3 id="txndebugtxn-msg"><a href="#txndebugtxn-msg"><code>TXN.Debug(txn, msg)</code></a></h3>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: TXN.log</li>
+</ul>
+<p>Does the same job than:</p>
+<pre><code class="language-lua">function Debug(txn, msg)
+        TXN.log(txn, core.debug, msg)
+end
+</code></pre>
+<h3 id="txninfotxn-msg"><a href="#txninfotxn-msg"><code>TXN.Info(txn, msg)</code></a></h3>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: TXN.log</li>
+</ul>
+<pre><code class="language-lua">function Debug(txn, msg)
+        TXN.log(txn, core.info, msg)
+end
+</code></pre>
+<h3 id="txnwarningtxn-msg"><a href="#txnwarningtxn-msg"><code>TXN.Warning(txn, msg)</code></a></h3>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: TXN.log</li>
+</ul>
+<pre><code class="language-lua">function Debug(txn, msg)
+        TXN.log(txn, core.warning, msg)
+end
+</code></pre>
+<h3 id="txnalerttxn-msg"><a href="#txnalerttxn-msg"><code>TXN.Alert(txn, msg)</code></a></h3>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>msg</strong> (<em>string</em>): The log content.</li>
+<li><strong>See</strong>: TXN.log</li>
+</ul>
+<pre><code class="language-lua">function Debug(txn, msg)
+        TXN.log(txn, core.alert, msg)
+end
+</code></pre>
+<h3 id="txnget_privtxn"><a href="#txnget_privtxn"><code>TXN.get_priv(txn)</code></a></h3>
+<p>Return Lua data stored in the current transaction (with the <code>TXN.set_priv()</code>) function. If no data are stored, it returns a nil value.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>Returns</strong>: the opaque data previsously stored, or nil if nothing is avalaible.</li>
+</ul>
+<h3 id="txnset_privtxn-data"><a href="#txnset_privtxn-data"><code>TXN.set_priv(txn, data)</code></a></h3>
+<p>Store any data in the current HAProxy transaction. This action replace the old stored data.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>data</strong> (<em>opaque</em>): The data which is stored in the transaction.</li>
+</ul>
+<h3 id="txnset_vartxn-var-value"><a href="#txnset_vartxn-var-value"><code>TXN.set_var(TXN, var, value)</code></a></h3>
+<p>Converts a Lua type in a HAProxy type and store it in a variable &lt;var&gt;.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>var</strong> (<em>string</em>): The variable name according with the HAProxy variable syntax.</li>
+<li><strong>value</strong> (<em>opaque</em>): The data which is stored in the variable.</li>
+</ul>
+<h3 id="txnget_vartxn-var"><a href="#txnget_vartxn-var"><code>TXN.get_var(TXN, var)</code></a></h3>
+<p>Returns data stored in the variable &lt;var&gt; converter in Lua type.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>var</strong> (<em>string</em>): The variable name according with the HAProxy variable syntax.</li>
+</ul>
+<h3 id="txnget_headerstxn"><a href="#txnget_headerstxn"><code>TXN.get_headers(txn)</code></a></h3>
+<p>This function returns an array of headers.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>Returns</strong>: an array of headers.</li>
+</ul>
+<h3 id="txndonetxn"><a href="#txndonetxn"><code>TXN.done(txn)</code></a></h3>
+<p>This function terminates processing of the transaction and the associated session. It can be used when a critical error is detected or to terminate processing after some data have been returned to the client (eg: a redirect).</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+</ul>
+<h3 id="txnset_logleveltxn-loglevel"><a href="#txnset_logleveltxn-loglevel"><code>TXN.set_loglevel(txn, loglevel)</code></a></h3>
+<p>Is used to change the log level of the current request. The "loglevel" must be an integer between 0 and 7.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>loglevel</strong> (<em>integer</em>): The required log level. This variable can be one of</li>
+<li><strong>See</strong>: core.&lt;loglevel&gt;</li>
+</ul>
+<h3 id="txnset_tostxn-tos"><a href="#txnset_tostxn-tos"><code>TXN.set_tos(txn, tos)</code></a></h3>
+<p>Is used to set the TOS or DSCP field value of packets sent to the client to the value passed in "tos" on platforms which support this.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>tos</strong> (<em>integer</em>): The new TOS os DSCP.</li>
+</ul>
+<h3 id="txnset_marktxn-mark"><a href="#txnset_marktxn-mark"><code>TXN.set_mark(txn, mark)</code></a></h3>
+<p>Is used to set the Netfilter MARK on all packets sent to the client to the value passed in "mark" on platforms which support it.</p>
+<ul>
+<li><strong>txn</strong> (<em>class_txn</em>): The class txn object containing the data.</li>
+<li><strong>mark</strong> (<em>integer</em>): The mark value.</li>
+</ul>
+<h2 id="socket-class"><a href="#socket-class">Socket class</a></h2>
+<h3 id="socket"><a href="#socket"><code>Socket</code></a></h3>
+<p>This class must be compatible with the Lua Socket class. Only the 'client' functions are available. See the Lua Socket documentation:</p>
+<p><a href="http://w3.impa.br/~diego/software/luasocket/tcp.html">http://w3.impa.br/~diego/software/luasocket/tcp.html</a></p>
+<h3 id="socketclosesocket"><a href="#socketclosesocket"><code>Socket.close(socket)</code></a></h3>
+<p>Closes a TCP object. The internal socket used by the object is closed and the local address to which the object was bound is made available to other applications. No further operations (except for further calls to the close method) are allowed on a closed Socket.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+</ul>
+<p>Note: It is important to close all used sockets once they are not needed, since, in many systems, each socket uses a file descriptor, which are limited system resources. Garbage-collected objects are automatically closed before destruction, though.</p>
+<h3 id="socketconnectsocket-address-port"><a href="#socketconnectsocket-address-port"><code>Socket.connect(socket, address[, port])</code></a></h3>
+<p>Attempts to connect a socket object to a remote host.</p>
+<p>In case of error, the method returns nil followed by a string describing the error. In case of success, the method returns 1.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>address</strong> (<em>string</em>): can be an IP address or a host name. See below for more information.</li>
+<li><strong>port</strong> (<em>integer</em>): must be an integer number in the range [1..64K].</li>
+<li><strong>Returns</strong>: 1 or nil.</li>
+</ul>
+<p>an address field extension permits to use the connect() function to connect to other stream than TCP. The syntax containing a simpleipv4 or ipv6 address is the basically expected format. This format requires the port.</p>
+<p>Other format accepted are a socket path like "/socket/path", it permits to connect to a socket. abstract namespaces are supported with the prefix "abns@", and finaly a filedescriotr can be passed with the prefix "fd@". The prefix "ipv4@", "ipv6@" and "unix@" are also supported. The port can be passed int the string. The syntax "127.0.0.1:1234" is valid. in this case, the parameter <em>port</em> is ignored.</p>
+<h3 id="socketconnect_sslsocket-address-port"><a href="#socketconnect_sslsocket-address-port"><code>Socket.connect_ssl(socket, address, port)</code></a></h3>
+<p>Same behavior than the function socket:connect, but uses SSL.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>Returns</strong>: 1 or nil.</li>
+</ul>
+<h3 id="socketgetpeernamesocket"><a href="#socketgetpeernamesocket"><code>Socket.getpeername(socket)</code></a></h3>
+<p>Returns information about the remote side of a connected client object.</p>
+<p>Returns a string with the IP address of the peer, followed by the port number that peer is using for the connection. In case of error, the method returns nil.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>Returns</strong>: a string containing the server information.</li>
+</ul>
+<h3 id="socketgetsocknamesocket"><a href="#socketgetsocknamesocket"><code>Socket.getsockname(socket)</code></a></h3>
+<p>Returns the local address information associated to the object.</p>
+<p>The method returns a string with local IP address and a number with the port. In case of error, the method returns nil.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>Returns</strong>: a string containing the client information.</li>
+</ul>
+<h3 id="socketreceivesocket-pattern--prefix"><a href="#socketreceivesocket-pattern--prefix"><code>Socket.receive(socket, [pattern [, prefix]])</code></a></h3>
+<p>Reads data from a client object, according to the specified read pattern. Patterns follow the Lua file I/O format, and the difference in performance between all patterns is negligible.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>pattern</strong> (<em>string|integer</em>): Describe what is required (see below).</li>
+<li><strong>prefix</strong> (<em>string</em>): A string which will be prefix the returned data.</li>
+<li><strong>Returns</strong>: a string containing the required data or nil.</li>
+</ul>
+<p>Pattern can be any of the following:</p>
+<ul>
+<li><strong><code>*a</code></strong>: reads from the socket until the connection is closed. No end-of-line translation is performed;</li>
+<li><strong><code>*l</code></strong>: reads a line of text from the Socket. The line is terminated by a LF character (ASCII 10), optionally preceded by a CR character (ASCII 13). The CR and LF characters are not included in the returned line.  In fact, all CR characters are ignored by the pattern. This is the default pattern.</li>
+<li><strong>number</strong>: causes the method to read a specified number of bytes from the Socket. Prefix is an optional string to be concatenated to the beginning of any received data before return.</li>
+<li><strong>empty</strong>: If the pattern is left empty, the default option is <code>*l</code>.</li>
+</ul>
+<p>If successful, the method returns the received pattern. In case of error, the method returns nil followed by an error message which can be the string 'closed' in case the connection was closed before the transmission was completed or the string 'timeout' in case there was a timeout during the operation. Also, after the error message, the function returns the partial result of the transmission.</p>
+<p>Important note: This function was changed severely. It used to support multiple patterns (but I have never seen this feature used) and now it doesn't anymore.  Partial results used to be returned in the same way as successful results. This last feature violated the idea that all functions should return nil on error.  Thus it was changed too.</p>
+<h3 id="socketsendsocket-data--start--end-"><a href="#socketsendsocket-data--start--end-"><code>Socket.send(socket, data [, start [, end ]])</code></a></h3>
+<p>Sends data through client object.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>data</strong> (<em>string</em>): The data that will be sent.</li>
+<li><strong>start</strong> (<em>integer</em>): The start position in the buffer of the data which will be sent.</li>
+<li><strong>end</strong> (<em>integer</em>): The end position in the buffer of the data which will be sent.</li>
+<li><strong>Returns</strong>: see below.</li>
+</ul>
+<p>Data is the string to be sent. The optional arguments i and j work exactly like the standard string.sub Lua function to allow the selection of a substring to be sent.</p>
+<p>If successful, the method returns the index of the last byte within [start, end] that has been sent. Notice that, if start is 1 or absent, this is effectively the total number of bytes sent. In case of error, the method returns nil, followed by an error message, followed by the index of the last byte within [start, end] that has been sent. You might want to try again from the byte following that. The error message can be 'closed' in case the connection was closed before the transmission was completed or the string 'timeout' in case there was a timeout during the operation.</p>
+<p>Note: Output is not buffered. For small strings, it is always better to concatenate them in Lua (with the '..' operator) and send the result in one call instead of calling the method several times.</p>
+<h3 id="socketsetoptionsocket-option--value"><a href="#socketsetoptionsocket-option--value"><code>Socket.setoption(socket, option [, value])</code></a></h3>
+<p>Just implemented for compatibility, this cal does nothing.</p>
+<h3 id="socketsettimeoutsocket-value--mode"><a href="#socketsettimeoutsocket-value--mode"><code>Socket.settimeout(socket, value [, mode])</code></a></h3>
+<p>Changes the timeout values for the object. All I/O operations are blocking. That is, any call to the methods send, receive, and accept will block indefinitely, until the operation completes. The settimeout method defines a limit on the amount of time the I/O methods can block. When a timeout time has elapsed, the affected methods give up and fail with an error code.</p>
+<p>The amount of time to wait is specified as the value parameter, in seconds.</p>
+<p>The timeout modes are bot implemented, the only settable timeout is the inactivity time waiting for complete the internal buffer send or waiting for receive data.</p>
+<ul>
+<li><strong>socket</strong> (<em>class_socket</em>): Is the manipulated Socket.</li>
+<li><strong>value</strong> (<em>integer</em>): The timeout value.</li>
+</ul>
+<h2 id="map-class"><a href="#map-class">Map class</a></h2>
+<h3 id="map"><a href="#map"><code>Map</code></a></h3>
+<p>This class permits to do some lookup in HAProxy maps. The declared maps can be modified during the runtime throught the HAProxy management socket.</p>
+<pre><code class="language-lua">default = "usa"
+
+-- Create and load map
+geo = Map.new("geo.map", Map.ip);
+
+-- Create new fetch that returns the user country
+core.register_fetches("country", function(txn)
+        local src;
+        local loc;
+
+        src = txn.f:fhdr("x-forwarded-for");
+        if (src == nil) then
+                src = txn.f:src()
+                if (src == nil) then
+                        return default;
+                end
+        end
+
+        -- Perform lookup
+        loc = geo:lookup(src);
+
+        if (loc == nil) then
+                return default;
+        end
+
+        return loc;
+end);
+</code></pre>
+<h3 id="mapint"><a href="#mapint"><code>Map.int</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapip"><a href="#mapip"><code>Map.ip</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapstr"><a href="#mapstr"><code>Map.str</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapbeg"><a href="#mapbeg"><code>Map.beg</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapsub"><a href="#mapsub"><code>Map.sub</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapdir"><a href="#mapdir"><code>Map.dir</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapdom"><a href="#mapdom"><code>Map.dom</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapend"><a href="#mapend"><code>Map.end</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapreg"><a href="#mapreg"><code>Map.reg</code></a></h3>
+<p>See the HAProxy configuration.txt file, chapter "Using ACLs and fetching samples" ans subchapter "ACL basics" to understand this pattern matching method.</p>
+<h3 id="mapnewfile-method"><a href="#mapnewfile-method"><code>Map.new(file, method)</code></a></h3>
+<p>Creates and load a map.</p>
+<ul>
+<li><strong>file</strong> (<em>string</em>): Is the file containing the map.</li>
+<li><strong>method</strong> (<em>integer</em>): Is the map pattern matching method. See the attributes of the Map class.</li>
+<li><strong>Returns</strong>: a class Map object.</li>
+<li><strong>See</strong>: The Map attributes.</li>
+</ul>
+<h3 id="maplookupmap-str"><a href="#maplookupmap-str"><code>Map.lookup(map, str)</code></a></h3>
+<p>Perform a lookup in a map.</p>
+<ul>
+<li><strong>map</strong> (<em>class_map</em>): Is the class Map object.</li>
+<li><strong>str</strong> (<em>string</em>): Is the string used as key.</li>
+<li><strong>Returns</strong>: a string containing the result or nil if no match.</li>
+</ul>
+<h3 id="mapslookupmap-str"><a href="#mapslookupmap-str"><code>Map.slookup(map, str)</code></a></h3>
+<p>Perform a lookup in a map.</p>
+<ul>
+<li><strong>map</strong> (<em>class_map</em>): Is the class Map object.</li>
+<li><strong>str</strong> (<em>string</em>): Is the string used as key.</li>
+<li><strong>Returns</strong>: a string containing the result or empty string if no match.</li>
+</ul>
+<h2 id="applethttp-class"><a href="#applethttp-class">AppletHTTP class</a></h2>
+<h3 id="applethttp"><a href="#applethttp"><code>AppletHTTP</code></a></h3>
+<p>This class is used with applets that requires the 'http' mode. The http applet can be registered with the <em>core.register_service()</em> function. They are used for processing an http request like a server in back of HAProxy.</p>
+<p>This is an hello world sample code:</p>
+<pre><code class="language-lua">core.register_service("hello-world", "http" }, function(applet)
+   local response = "Hello World !"
+   applet:set_status(200)
+   applet:add_header("content-length", string.len(response))
+   applet:add_header("content-type", "text/plain")
+   applet:start_response()
+   applet:send(response)
+end)
+</code></pre>
+<h3 id="applethttpset_statuscode"><a href="#applethttpset_statuscode"><code>AppletHTTP.set_status(code)</code></a></h3>
+<p>This function sets the HTTP status code for the response. The allowed code are from 100 to 599.</p>
+<ul>
+<li><strong>code</strong> (<em>integer</em>): the status code returned to the client.</li>
+</ul>
+<h3 id="applethttpadd_headername-value"><a href="#applethttpadd_headername-value"><code>AppletHTTP.add_header(name, value)</code></a></h3>
+<p>This function add an header in the response. Duplicated headers are not collapsed. The special header <em>content-length</em> is used to determinate the response length. If it not exists, a <em>transfer-encoding: chunked</em> is set, and all the write from the funcion <em>AppletHTTP:send()</em> become a chunk.</p>
+<ul>
+<li><strong>name</strong> (<em>string</em>): the header name</li>
+<li><strong>value</strong> (<em>string</em>): the header value</li>
+</ul>
+<h3 id="applethttpstart_response"><a href="#applethttpstart_response"><code>AppletHTTP.start_response()</code></a></h3>
+<p>This function indicates to the HTTP engine that it can process and send the response headers. After this called we cannot add headers to the response; We cannot use the <em>AppletHTTP:send()</em> function if the <em>AppletHTTP:start_response()</em> is not called.</p>
+<h3 id="applethttpgetline"><a href="#applethttpgetline"><code>AppletHTTP.getline()</code></a></h3>
+<p>This function returns a string containing one line from the http body. If the data returned doesn't contains a final '\n' its assumed than its the last available data before the end of stream.</p>
+<ul>
+<li><strong>Returns</strong>: a string. The string can be empty if we reach the end of the stream.</li>
+</ul>
+<h3 id="applethttpreceivesize"><a href="#applethttpreceivesize"><code>AppletHTTP.receive([size])</code></a></h3>
+<p>Reads data from the HTTP body, according to the specified read <em>size</em>. If the <em>size</em> is missing, the function tries to read all the content of the stream until the end. If the <em>size</em> is bigger than the http body, it returns the amount of data avalaible.</p>
+<ul>
+<li><strong>size</strong> (<em>integer</em>): the required read size.</li>
+<li><strong>Returns</strong>: always return a string,the string can be empty is the connexion is closed.</li>
+</ul>
+<h3 id="applethttpsendmsg"><a href="#applethttpsendmsg"><code>AppletHTTP.send(msg)</code></a></h3>
+<p>Send the message <em>msg</em> on the http request body.</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): the message to send.</li>
+</ul>
+<h2 id="applettcp-class"><a href="#applettcp-class">AppletTCP class</a></h2>
+<h3 id="applettcp"><a href="#applettcp"><code>AppletTCP</code></a></h3>
+<p>This class is used with applets that requires the 'tcp' mode. The tcp applet can be registered with the <em>core.register_service()</em> function. They are used for processing a tcp stream like a server in back of HAProxy.</p>
+<h3 id="applettcpgetline"><a href="#applettcpgetline"><code>AppletTCP.getline()</code></a></h3>
+<p>This function returns a string containing one line from the stream. If the data returned doesn't contains a final '\n' its assumed than its the last available data before the end of stream.</p>
+<ul>
+<li><strong>Returns</strong>: a string. The string can be empty if we reach the end of the stream.</li>
+</ul>
+<h3 id="applettcpreceivesize"><a href="#applettcpreceivesize"><code>AppletTCP.receive([size])</code></a></h3>
+<p>Reads data from the TCP stream, according to the specified read <em>size</em>. If the <em>size</em> is missing, the function tries to read all the content of the stream until the end.</p>
+<ul>
+<li><strong>size</strong> (<em>integer</em>): the required read size.</li>
+<li><strong>Returns</strong>: always return a string,the string can be empty is the connexion is closed.</li>
+</ul>
+<h3 id="applettcpsendmsg"><a href="#applettcpsendmsg"><code>AppletTCP.send(msg)</code></a></h3>
+<p>Send the message on the stream.</p>
+<ul>
+<li><strong>msg</strong> (<em>string</em>): the message to send.</li>
+</ul>
+<h2 id="external-lua-libraries"><a href="#external-lua-libraries">External Lua libraries</a></h2>
+<p>A lot of useful lua libraries can be found here:</p>
+<ul>
+<li><a href="https://lua-toolbox.com/">https://lua-toolbox.com/</a></li>
+</ul>
+<p>Redis acces:</p>
+<ul>
+<li><a href="https://github.com/nrk/redis-lua">https://github.com/nrk/redis-lua</a></li>
+</ul>
+<p>This is an example about the usage of the Redis library with HAProxy. Note that each call of any function of this library can throw an error if the socket connection fails.</p>
+<pre><code class="language-lua">-- load the redis library
+local redis = require("redis");
+
+function do_something(txn)
+
+   -- create and connect new tcp socket
+   local tcp = core.tcp();
+   tcp:settimeout(1);
+   tcp:connect("127.0.0.1", 6379);
+
+   -- use the redis library with this new socket
+   local client = redis.connect({socket=tcp});
+   client:ping();
+
+end
+</code></pre>
+<p>OpenSSL:</p>
+<ul>
+<li><a href="http://mkottman.github.io/luacrypto/index.html">http://mkottman.github.io/luacrypto/index.html</a></li>
+<li><a href="https://github.com/brunoos/luasec/wiki">https://github.com/brunoos/luasec/wiki</a></li>
+</ul>
+
+</main>
+
+<aside class="toc"><b>On this page</b><a href="#how-lua-runs-in-haproxy" class="l2" title="How Lua runs in HAProxy">How Lua runs in HAProxy</a><a href="#haproxy-lua-running-contexts" class="l3" title="HAProxy Lua running contexts">HAProxy Lua running contexts</a><a href="#haproxy-lua-hello-world" class="l3" title="HAProxy Lua Hello world">HAProxy Lua Hello world</a><a href="#core-class" class="l2" title="Core class">Core class</a><a href="#core" class="l3" title="core">core</a><a href="#coreemerg" class="l3" title="core.emerg">core.emerg</a><a href="#corealert" class="l3" title="core.alert">core.alert</a><a href="#corecrit" class="l3" title="core.crit">core.crit</a><a href="#coreerr" class="l3" title="core.err">core.err</a><a href="#corewarning" class="l3" title="core.warning">core.warning</a><a href="#corenotice" class="l3" title="core.notice">core.notice</a><a href="#coreinfo" class="l3" title="core.info">core.info</a><a href="#coredebug" class="l3" title="core.debug">core.debug</a><a href="#corelogloglevel-msg" class="l3" title="core.log(loglevel, msg)">core.log(loglevel, msg)</a><a href="#coredebugmsg" class="l3" title="core.Debug(msg)">core.Debug(msg)</a><a href="#coreinfomsg" class="l3" title="core.Info(msg)">core.Info(msg)</a><a href="#corewarningmsg" class="l3" title="core.Warning(msg)">core.Warning(msg)</a><a href="#corealertmsg" class="l3" title="core.Alert(msg)">core.Alert(msg)</a><a href="#coreadd_aclfilename-key" class="l3" title="core.add_acl(filename, key)">core.add_acl(filename, key)</a><a href="#coredel_aclfilename-key" class="l3" title="core.del_acl(filename, key)">core.del_acl(filename, key)</a><a href="#coredel_mapfilename-key" class="l3" title="core.del_map(filename, key)">core.del_map(filename, key)</a><a href="#coremsleepmilliseconds" class="l3" title="core.msleep(milliseconds)">core.msleep(milliseconds)</a><a href="#coreregister_actionname-actions-func" class="l3" title="core.register_action(name, actions, func)">core.register_action(name, actions, func)</a><a href="#coreregister_convertersname-func" class="l3" title="core.register_converters(name, func)">core.register_converters(name, func)</a><a href="#coreregister_fetchesname-func" class="l3" title="core.register_fetches(name, func)">core.register_fetches(name, func)</a><a href="#coreregister_servicename-mode-func" class="l3" title="core.register_service(name, mode, func)">core.register_service(name, mode, func)</a><a href="#coreregister_initfunc" class="l3" title="core.register_init(func)">core.register_init(func)</a><a href="#coreregister_taskfunc" class="l3" title="core.register_task(func)">core.register_task(func)</a><a href="#coreset_nicenice" class="l3" title="core.set_nice(nice)">core.set_nice(nice)</a><a href="#coreset_mapfilename-key-value" class="l3" title="core.set_map(filename, key, value)">core.set_map(filename, key, value)</a><a href="#coresleepint-seconds" class="l3" title="core.sleep(int seconds)">core.sleep(int seconds)</a><a href="#coretcp" class="l3" title="core.tcp()">core.tcp()</a><a href="#coredonedata" class="l3" title="core.done(data)">core.done(data)</a><a href="#coreyield" class="l3" title="core.yield()">core.yield()</a><a href="#fetches-class" class="l2" title="Fetches class">Fetches class</a><a href="#fetches" class="l3" title="Fetches">Fetches</a><a href="#converters-class" class="l2" title="Converters class">Converters class</a><a href="#converters" class="l3" title="Converters">Converters</a><a href="#channel-class" class="l2" title="Channel class">Channel class</a><a href="#channel" class="l3" title="Channel">Channel</a><a href="#channeldupchannel" class="l3" title="Channel.dup(channel)">Channel.dup(channel)</a><a href="#channelgetchannel" class="l3" title="Channel.get(channel)">Channel.get(channel)</a><a href="#channelgetlinechannel" class="l3" title="Channel.getline(channel)">Channel.getline(channel)</a><a href="#channelsetchannel-string" class="l3" title="Channel.set(channel, string)">Channel.set(channel, string)</a><a href="#channelappendchannel-string" class="l3" title="Channel.append(channel, string)">Channel.append(channel, string)</a><a href="#channelsendchannel-string" class="l3" title="Channel.send(channel, string)">Channel.send(channel, string)</a><a href="#channelget_in_lengthchannel" class="l3" title="Channel.get_in_length(channel)">Channel.get_in_length(channel)</a><a href="#channelget_out_lengthchannel" class="l3" title="Channel.get_out_length(channel)">Channel.get_out_length(channel)</a><a href="#channelforwardchannel-int" class="l3" title="Channel.forward(channel, int)">Channel.forward(channel, int)</a><a href="#http-class" class="l2" title="HTTP class">HTTP class</a><a href="#http" class="l3" title="HTTP">HTTP</a><a href="#httpreq_get_headershttp" class="l3" title="HTTP.req_get_headers(http)">HTTP.req_get_headers(http)</a><a href="#httpres_get_headershttp" class="l3" title="HTTP.res_get_headers(http)">HTTP.res_get_headers(http)</a><a href="#httpreq_add_headerhttp-name-value" class="l3" title="HTTP.req_add_header(http, name, value)">HTTP.req_add_header(http, name, value)</a><a href="#httpres_add_headerhttp-name-value" class="l3" title="HTTP.res_add_header(http, name, value)">HTTP.res_add_header(http, name, value)</a><a href="#httpreq_del_headerhttp-name" class="l3" title="HTTP.req_del_header(http, name)">HTTP.req_del_header(http, name)</a><a href="#httpres_del_headerhttp-name" class="l3" title="HTTP.res_del_header(http, name)">HTTP.res_del_header(http, name)</a><a href="#httpreq_set_headerhttp-name-value" class="l3" title="HTTP.req_set_header(http, name, value)">HTTP.req_set_header(http, name, value)</a><a href="#httpres_set_headerhttp-name-value" class="l3" title="HTTP.res_set_header(http, name, value)">HTTP.res_set_header(http, name, value)</a><a href="#httpreq_rep_headerhttp-name-regex-replace" class="l3" title="HTTP.req_rep_header(http, name, regex, replace)">HTTP.req_rep_header(http, name, regex, replace)</a><a href="#httpres_rep_headerhttp-name-regex-string" class="l3" title="HTTP.res_rep_header(http, name, regex, string)">HTTP.res_rep_header(http, name, regex, string)</a><a href="#httpreq_replace_valuehttp-name-regex-replace" class="l3" title="HTTP.req_replace_value(http, name, regex, replace)">HTTP.req_replace_value(http, name, regex, replace)</a><a href="#httpres_replace_valuehttp-name-regex-replace" class="l3" title="HTTP.res_replace_value(http, name, regex, replace)">HTTP.res_replace_value(http, name, regex, replace)</a><a href="#httpreq_set_methodhttp-method" class="l3" title="HTTP.req_set_method(http, method)">HTTP.req_set_method(http, method)</a><a href="#httpreq_set_pathhttp-path" class="l3" title="HTTP.req_set_path(http, path)">HTTP.req_set_path(http, path)</a><a href="#httpreq_set_queryhttp-query" class="l3" title="HTTP.req_set_query(http, query)">HTTP.req_set_query(http, query)</a><a href="#httpreq_set_urihttp-uri" class="l3" title="HTTP.req_set_uri(http, uri)">HTTP.req_set_uri(http, uri)</a><a href="#httpres_set_statushttp-status" class="l3" title="HTTP.res_set_status(http, status)">HTTP.res_set_status(http, status)</a><a href="#txn-class" class="l2" title="TXN class">TXN class</a><a href="#txn" class="l3" title="TXN">TXN</a><a href="#txnc" class="l3" title="TXN.c">TXN.c</a><a href="#txnsc" class="l3" title="TXN.sc">TXN.sc</a><a href="#txnf" class="l3" title="TXN.f">TXN.f</a><a href="#txnsf" class="l3" title="TXN.sf">TXN.sf</a><a href="#txnreq" class="l3" title="TXN.req">TXN.req</a><a href="#txnres" class="l3" title="TXN.res">TXN.res</a><a href="#txnhttp" class="l3" title="TXN.http">TXN.http</a><a href="#txnlogtxn-loglevel-msg" class="l3" title="TXN.log(TXN, loglevel, msg)">TXN.log(TXN, loglevel, msg)</a><a href="#txndeflogtxn-msg" class="l3" title="TXN.deflog(TXN, msg)">TXN.deflog(TXN, msg)</a><a href="#txndebugtxn-msg" class="l3" title="TXN.Debug(txn, msg)">TXN.Debug(txn, msg)</a><a href="#txninfotxn-msg" class="l3" title="TXN.Info(txn, msg)">TXN.Info(txn, msg)</a><a href="#txnwarningtxn-msg" class="l3" title="TXN.Warning(txn, msg)">TXN.Warning(txn, msg)</a><a href="#txnalerttxn-msg" class="l3" title="TXN.Alert(txn, msg)">TXN.Alert(txn, msg)</a><a href="#txnget_privtxn" class="l3" title="TXN.get_priv(txn)">TXN.get_priv(txn)</a><a href="#txnset_privtxn-data" class="l3" title="TXN.set_priv(txn, data)">TXN.set_priv(txn, data)</a><a href="#txnset_vartxn-var-value" class="l3" title="TXN.set_var(TXN, var, value)">TXN.set_var(TXN, var, value)</a><a href="#txnget_vartxn-var" class="l3" title="TXN.get_var(TXN, var)">TXN.get_var(TXN, var)</a><a href="#txnget_headerstxn" class="l3" title="TXN.get_headers(txn)">TXN.get_headers(txn)</a><a href="#txndonetxn" class="l3" title="TXN.done(txn)">TXN.done(txn)</a><a href="#txnset_logleveltxn-loglevel" class="l3" title="TXN.set_loglevel(txn, loglevel)">TXN.set_loglevel(txn, loglevel)</a><a href="#txnset_tostxn-tos" class="l3" title="TXN.set_tos(txn, tos)">TXN.set_tos(txn, tos)</a><a href="#txnset_marktxn-mark" class="l3" title="TXN.set_mark(txn, mark)">TXN.set_mark(txn, mark)</a><a href="#socket-class" class="l2" title="Socket class">Socket class</a><a href="#socket" class="l3" title="Socket">Socket</a><a href="#socketclosesocket" class="l3" title="Socket.close(socket)">Socket.close(socket)</a><a href="#socketconnectsocket-address-port" class="l3" title="Socket.connect(socket, address[, port])">Socket.connect(socket, address[, port])</a><a href="#socketconnect_sslsocket-address-port" class="l3" title="Socket.connect_ssl(socket, address, port)">Socket.connect_ssl(socket, address, port)</a><a href="#socketgetpeernamesocket" class="l3" title="Socket.getpeername(socket)">Socket.getpeername(socket)</a><a href="#socketgetsocknamesocket" class="l3" title="Socket.getsockname(socket)">Socket.getsockname(socket)</a><a href="#socketreceivesocket-pattern--prefix" class="l3" title="Socket.receive(socket, [pattern [, prefix]])">Socket.receive(socket, [pattern [, prefix]])</a><a href="#socketsendsocket-data--start--end-" class="l3" title="Socket.send(socket, data [, start [, end ]])">Socket.send(socket, data [, start [, end ]])</a><a href="#socketsetoptionsocket-option--value" class="l3" title="Socket.setoption(socket, option [, value])">Socket.setoption(socket, option [, value])</a><a href="#socketsettimeoutsocket-value--mode" class="l3" title="Socket.settimeout(socket, value [, mode])">Socket.settimeout(socket, value [, mode])</a><a href="#map-class" class="l2" title="Map class">Map class</a><a href="#map" class="l3" title="Map">Map</a><a href="#mapint" class="l3" title="Map.int">Map.int</a><a href="#mapip" class="l3" title="Map.ip">Map.ip</a><a href="#mapstr" class="l3" title="Map.str">Map.str</a><a href="#mapbeg" class="l3" title="Map.beg">Map.beg</a><a href="#mapsub" class="l3" title="Map.sub">Map.sub</a><a href="#mapdir" class="l3" title="Map.dir">Map.dir</a><a href="#mapdom" class="l3" title="Map.dom">Map.dom</a><a href="#mapend" class="l3" title="Map.end">Map.end</a><a href="#mapreg" class="l3" title="Map.reg">Map.reg</a><a href="#mapnewfile-method" class="l3" title="Map.new(file, method)">Map.new(file, method)</a><a href="#maplookupmap-str" class="l3" title="Map.lookup(map, str)">Map.lookup(map, str)</a><a href="#mapslookupmap-str" class="l3" title="Map.slookup(map, str)">Map.slookup(map, str)</a><a href="#applethttp-class" class="l2" title="AppletHTTP class">AppletHTTP class</a><a href="#applethttp" class="l3" title="AppletHTTP">AppletHTTP</a><a href="#applethttpset_statuscode" class="l3" title="AppletHTTP.set_status(code)">AppletHTTP.set_status(code)</a><a href="#applethttpadd_headername-value" class="l3" title="AppletHTTP.add_header(name, value)">AppletHTTP.add_header(name, value)</a><a href="#applethttpstart_response" class="l3" title="AppletHTTP.start_response()">AppletHTTP.start_response()</a><a href="#applethttpgetline" class="l3" title="AppletHTTP.getline()">AppletHTTP.getline()</a><a href="#applethttpreceivesize" class="l3" title="AppletHTTP.receive([size])">AppletHTTP.receive([size])</a><a href="#applethttpsendmsg" class="l3" title="AppletHTTP.send(msg)">AppletHTTP.send(msg)</a><a href="#applettcp-class" class="l2" title="AppletTCP class">AppletTCP class</a><a href="#applettcp" class="l3" title="AppletTCP">AppletTCP</a><a href="#applettcpgetline" class="l3" title="AppletTCP.getline()">AppletTCP.getline()</a><a href="#applettcpreceivesize" class="l3" title="AppletTCP.receive([size])">AppletTCP.receive([size])</a><a href="#applettcpsendmsg" class="l3" title="AppletTCP.send(msg)">AppletTCP.send(msg)</a><a href="#external-lua-libraries" class="l2" title="External Lua libraries">External Lua libraries</a></aside>
+
+</div>
+
+<footer><div class="bar"><span>HAProxy documentation</span></div></footer>
+<dialog class="search" data-base="/dkt/demos/haproxy" aria-label="Search">
+<input type="search" placeholder="Search the titles" autocomplete="off" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="true">
+<p class="status" role="status">Type to search the titles.</p>
+<div class="results" id="search-results" role="listbox"></div>
+<p class="keys"><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move <kbd>Enter</kbd> to open <kbd>Esc</kbd> to close <kbd>#</kbd> sections only <kbd>&gt;</kbd> pages only</p>
+</dialog>
+<script src="/dkt/demos/haproxy/search.js"></script>
+<script src="/dkt/demos/haproxy/docs.js"></script>
+</body>
+</html>
