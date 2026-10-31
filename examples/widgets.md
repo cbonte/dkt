@@ -1,43 +1,8 @@
-# Widgets
+# Widgets at work
 
-Components for a page, written as ordinary Markdown between 2 comments. GitHub and the terminal show
-the Markdown as it is, and the site makes a component of it.
-
-```
-<!-- site: widget NAME key=value -->
-the blocks of the widget
-<!-- site: end -->
-```
-
-The blocks go through the same rendering as the rest of the page, so headings keep their anchors and
-links keep their targets. Without JavaScript the blocks stay in place and the page reads the same.
-
-| Widget       | Blocks it holds                                                  | Keys                                     |
-| ------------ | ---------------------------------------------------------------- | ---------------------------------------- |
-| `tabs`       | a heading for each tab, and what follows                         | `id`                                     |
-| `checklist`  | a list of tasks                                                  | `id`                                     |
-| `steps`      | an ordered list                                                  | `id`                                     |
-| `quiz`       | a question, a list of choices, an answer                         | `id`, `answer`                           |
-| `carousel`   | slides, separated by thematic breaks                             | `id`, `show`, `autoplay`, `loop`, `zoom` |
-| `table`      | a table                                                          | `id`                                     |
-| `compare`    | 2 pictures                                                       | `id`                                     |
-| `diff`       | a code block of the language `diff`                              | `id`                                     |
-| `chart`      | a table of numbers                                               | `id`, `type`                             |
-| `flashcards` | a table of 2 columns, front and back                             | `id`                                     |
-| `annotated`  | a picture, and a list with one item for each pin                 | `id`, `pins`                             |
-| `builder`    | a table of fields, and a code block that holds the model         | `id`                                     |
-| `replay`     | a code block, the lines that start with `$ ` being typed         | `id`, `speed`                            |
-| `since`      | headings that start with a version, and their text               | `id`                                     |
-| `progress`   | nothing, a line of text for those who read it without the script | `id`                                     |
-
-`id` names the widget for what the reader did, such as the box ticked or the tab chosen. It is
-letters, digits, hyphens and underscores. A widget with no `id` is named by its place on the page,
-so give one to any widget whose state matters when the page changes. The state stays in the browser
-of the reader, under the address of the page.
-
-A widget cannot hold another one, and a `widget` or a `replace` cannot start inside one. `dkt lint`
-reports an unknown widget or key, a nested one, and a widget that no `end` closes. The tabs of a
-widget may repeat the names of other tabs, so the rule on repeated headings leaves them alone.
+Every widget of [the reference](../docs/widgets.md) in action. Each section shows the source of a
+widget, then its result. The reference gives the options, what is remembered and what happens
+without the script.
 
 ## Tabs
 
@@ -422,17 +387,3 @@ page, as the pages of this section do.
 ## Copy button
 
 Every code block of the site gets a button that copies it, with or without a widget.
-
-## In a theme of your own
-
-A theme that is not built in loads the files the built-in themes carry, `content.css`, `widgets.css`
-and `widgets.js`, from its `base.html`.
-
-```
-<link rel="stylesheet" href="{{ site.base_path }}/content.css">
-<link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
-<script src="{{ site.base_path }}/widgets.js" defer></script>
-```
-
-The style reads the variables `--bg`, `--surface`, `--line`, `--fg`, `--muted`, `--accent` and
-`--accent-bg`, and has a fallback for each.

@@ -44,7 +44,7 @@ pager = true
 [[page]]
 glob = "docs/*.md"
 section = "commands"
-order = ["cat", "fmt", "toc", "lint", "convert", "html", "site", "rst", "haproxy"]
+order = ["cat", "fmt", "toc", "lint", "convert", "html", "site", "widgets", "rst", "haproxy"]
 
 [[page]]
 glob = "examples/*.md"

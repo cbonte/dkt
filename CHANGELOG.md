@@ -13,6 +13,7 @@
 - site: show a card with the title and description of a page when the pointer rests on a link to it.
 - html: draw the ansi blocks with the colours of the terminal.
 - html: draw Mermaid blocks as SVG figures, and pie charts as pies.
+- widget: document every widget, with its blocks, its options, what it remembers and what it does without the script.
 - widget: group tabs, so that a choice made in one tab set is made in the others.
 - widget: filter and sort a table, compare 2 pictures with a slider and read a diff in 2 sides.
 - widget: draw a table as bars or lines, and turn a table into flashcards.
