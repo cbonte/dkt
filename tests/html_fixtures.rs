@@ -174,3 +174,27 @@ fn a_code_block_that_draws_boxes_is_marked() {
         page.content
     );
 }
+
+#[test]
+fn a_carousel_is_cut_into_slides_with_its_options() {
+    let page = page::render(
+        "<!-- site: widget carousel id=t show=\"1 2\" autoplay=4500 loop zoom -->\n\none\n\n---\n\n<!-- site: figure src=a.png alt=A -->\n\n---\n\ntwo\n\n---\n\n<!-- site: figure src=b.png alt=B -->\n<!-- site: end -->\n",
+        None,
+    );
+    let c = &page.content;
+    assert!(
+        c.contains(r#"data-widget="carousel" data-id="t" data-show="1 2 2" data-autoplay="4500" data-loop data-zoom"#),
+        "{c}"
+    );
+    assert!(
+        c.contains("--dkt-show:1;--dkt-show-m:2;--dkt-show-l:2"),
+        "{c}"
+    );
+    assert_eq!(c.matches(r#"class="dkt-slide""#).count(), 4, "{c}");
+    assert_eq!(c.matches("<div class=\"dkt-track\"").count(), 1, "{c}");
+    assert_eq!(c.matches("</div>").count(), 6, "{c}");
+    // The first 2 slides are in view, so the picture of the 2nd is loaded at once and the one of the
+    // 4th later.
+    assert!(c.contains(r#"<img src="a.png""#), "{c}");
+    assert!(c.contains(r#"<img loading="lazy" src="b.png""#), "{c}");
+}

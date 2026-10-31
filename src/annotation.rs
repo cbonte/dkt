@@ -25,6 +25,12 @@ pub enum Kind {
 /// The components a `widget` annotation can name.
 pub const WIDGETS: [&str; 5] = ["tabs", "checklist", "quiz", "steps", "carousel"];
 
+/// The most slides a carousel shows at once.
+const MAX_SHOWN: usize = 6;
+
+/// The shortest delay of an automatic carousel, in milliseconds.
+const MIN_AUTOPLAY: u32 = 500;
+
 impl Kind {
     pub const ALL: [Kind; 6] = [
         Kind::Page,
@@ -52,13 +58,14 @@ impl Kind {
             Kind::Figure | Kind::Replace => &["name", "src", "dark", "alt", "caption"],
             Kind::End => &[],
             Kind::Alias => &["words"],
-            Kind::Widget => &["id", "answer"],
+            Kind::Widget => &["id", "answer", "show", "autoplay"],
         }
     }
 
     fn flags(self) -> &'static [&'static str] {
         match self {
             Kind::Page => &["hide", "no-search"],
+            Kind::Widget => &["loop", "zoom"],
             _ => &[],
         }
     }
@@ -229,6 +236,39 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
             (false, Some(_)) => return Err(format!("'{widget}' does not take 'answer'")),
             (false, None) => {}
         }
+        // The options of a carousel.
+        if widget != "carousel" {
+            for key in ["show", "autoplay"] {
+                if annotation.get(key).is_some() {
+                    return Err(format!("'{widget}' does not take '{key}'"));
+                }
+            }
+            for flag in ["loop", "zoom"] {
+                if annotation.has(flag) {
+                    return Err(format!("'{widget}' does not take '{flag}'"));
+                }
+            }
+        }
+        if let Some(show) = annotation.get("show") {
+            let counts: Vec<&str> = show.split_whitespace().collect();
+            let valid = (1..=3).contains(&counts.len())
+                && counts.iter().all(|c| {
+                    c.parse::<usize>()
+                        .is_ok_and(|n| (1..=MAX_SHOWN).contains(&n))
+                });
+            if !valid {
+                return Err(format!(
+                    "show is 1 to 3 counts of slides from 1 to {MAX_SHOWN}, one for each width of page"
+                ));
+            }
+        }
+        if let Some(delay) = annotation.get("autoplay")
+            && !delay.parse::<u32>().is_ok_and(|ms| ms >= MIN_AUTOPLAY)
+        {
+            return Err(format!(
+                "autoplay is a delay in milliseconds, {MIN_AUTOPLAY} or more"
+            ));
+        }
         if annotation.get("id").is_some_and(|id| {
             id.is_empty()
                 || !id
@@ -294,6 +334,19 @@ mod tests {
         assert_eq!(a.get("id"), Some("install"));
         let quiz = parsed(" site: widget quiz answer=2 ");
         assert_eq!(quiz.get("answer"), Some("2"));
+    }
+
+    #[test]
+    fn a_carousel_takes_its_options() {
+        let a = parsed(" site: widget carousel show=\"1 2 3\" autoplay=4500 loop zoom ");
+        assert_eq!(a.get("show"), Some("1 2 3"));
+        assert_eq!(a.get("autoplay"), Some("4500"));
+        assert!(a.has("loop") && a.has("zoom"));
+        assert!(refused(" site: widget carousel show=0 ").contains("show is"));
+        assert!(refused(" site: widget carousel show=\"1 2 3 4\" ").contains("show is"));
+        assert!(refused(" site: widget carousel autoplay=10 ").contains("autoplay is"));
+        assert!(refused(" site: widget tabs loop ").contains("does not take 'loop'"));
+        assert!(refused(" site: widget steps show=2 ").contains("does not take 'show'"));
     }
 
     #[test]

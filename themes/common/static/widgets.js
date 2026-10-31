@@ -288,88 +288,259 @@
     return true;
   }
 
-  // One slide for each run of blocks between two thematic breaks.
-  function carousel(root, id) {
-    var children = Array.prototype.slice.call(root.children);
-    var slides = [[]];
-    children.forEach(function (node) {
-      if (node.tagName === "HR") slides.push([]);
-      else slides[slides.length - 1].push(node);
-    });
-    slides = slides.filter(function (blocks) {
-      return blocks.length;
-    });
-    if (slides.length < 2) return false;
-    children.forEach(function (node) {
-      if (node.tagName === "HR") root.removeChild(node);
-    });
-    var view = make("div", "dkt-viewport");
-    view.tabIndex = 0;
-    view.setAttribute("role", "group");
-    view.setAttribute("aria-roledescription", "carousel");
-    var frames = slides.map(function (blocks, i) {
-      var frame = make("div", "dkt-slide");
-      frame.setAttribute("role", "group");
-      frame.setAttribute("aria-roledescription", "slide");
-      frame.setAttribute("aria-label", i + 1 + " of " + slides.length);
-      blocks.forEach(function (node) {
-        frame.appendChild(node);
+  var icons = {
+    previous: '<path d="M15 5l-7 7 7 7"/>',
+    next: '<path d="M9 5l7 7-7 7"/>',
+    pause: '<path d="M8 5v14M16 5v14"/>',
+    play: '<path d="M8 5l11 7-11 7z" fill="currentColor"/>',
+  };
+
+  function icon(name) {
+    return (
+      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" ' +
+      'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      icons[name] +
+      "</svg>"
+    );
+  }
+
+  function iconButton(name, label, onclick) {
+    var node = make("button", "dkt-icon");
+    node.type = "button";
+    node.setAttribute("aria-label", label);
+    node.innerHTML = icon(name);
+    node.addEventListener("click", onclick);
+    return node;
+  }
+
+  var lightbox = null;
+
+  // The dialog that shows a picture larger, made once for the page.
+  function showLarger(image) {
+    if (!lightbox) {
+      lightbox = make("dialog", "dkt-lightbox");
+      lightbox.setAttribute("aria-label", "Enlarged picture");
+      lightbox.appendChild(make("img"));
+      lightbox.addEventListener("click", function () {
+        lightbox.close();
       });
-      view.appendChild(frame);
-      return frame;
+      document.body.appendChild(lightbox);
+    }
+    var big = lightbox.querySelector("img");
+    big.src = image.currentSrc || image.src;
+    big.alt = image.alt;
+    lightbox.showModal();
+  }
+
+  // The slides are a row that the page scrolls. The script adds the buttons, the dots, the loop,
+  // the automatic scroll and the larger view, which the annotation asks for.
+  function carousel(root, id) {
+    var track = root.querySelector(".dkt-track");
+    if (!track) return false;
+    var slides = Array.prototype.slice.call(track.children).filter(function (slide) {
+      var empty = !slide.children.length && !slide.textContent.trim();
+      if (empty) track.removeChild(slide);
+      return !empty;
     });
+    var count = slides.length;
+    if (count < 2) return false;
+    var looping = root.hasAttribute("data-loop");
+    var delay = parseInt(root.getAttribute("data-autoplay"), 10) || 0;
+    var most = Math.max.apply(null, (root.getAttribute("data-show") || "1").split(" ").map(Number));
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var pad = looping ? Math.min(Math.max(3, most), count) : 0;
+    var timer = null;
+    var held = false;
+    var stopped = reduced;
+    var settling = null;
+
+    slides.forEach(function (slide, i) {
+      slide.setAttribute("role", "group");
+      slide.setAttribute("aria-roledescription", "slide");
+      slide.setAttribute("aria-label", i + 1 + " of " + count);
+    });
+    root.setAttribute("role", "region");
+    root.setAttribute("aria-roledescription", "carousel");
+
+    if (root.hasAttribute("data-zoom")) {
+      Array.prototype.forEach.call(track.querySelectorAll("picture, img"), function (node) {
+        if (node.tagName === "IMG" && node.parentNode.tagName === "PICTURE") return;
+        var image = node.tagName === "IMG" ? node : node.querySelector("img");
+        var zoom = make("button", "dkt-zoom");
+        zoom.type = "button";
+        zoom.setAttribute("aria-label", "Enlarge: " + (image.alt || "picture"));
+        node.parentNode.insertBefore(zoom, node);
+        zoom.appendChild(node);
+      });
+    }
+
+    // The row is the slides, with the last ones in front and the first ones behind, so it never ends.
+    function copy(slide) {
+      var clone = slide.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      Array.prototype.forEach.call(clone.querySelectorAll("button, a"), function (node) {
+        node.tabIndex = -1;
+      });
+      return clone;
+    }
+    for (var k = 0; k < pad; k++) {
+      track.insertBefore(copy(slides[count - 1 - k]), track.firstChild);
+      track.appendChild(copy(slides[k]));
+    }
+
+    function step() {
+      return slides[0].offsetWidth + (parseFloat(getComputedStyle(track).columnGap) || 0);
+    }
+    function position() {
+      return Math.round(track.scrollLeft / step());
+    }
+    function visible() {
+      return Math.max(1, Math.round(track.clientWidth / step()));
+    }
+    function last() {
+      return looping ? count + 2 * pad - 1 : Math.max(0, count - visible());
+    }
+    function current() {
+      return looping ? (((position() - pad) % count) + count) % count : Math.min(position(), count - 1);
+    }
+    function jump(to) {
+      track.style.scrollSnapType = "none";
+      track.scrollLeft = to * step();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          track.style.scrollSnapType = "";
+        });
+      });
+    }
+    function go(to) {
+      track.scrollTo({
+        left: Math.max(0, Math.min(last(), to)) * step(),
+        behavior: reduced ? "auto" : "smooth",
+      });
+    }
+    function settle() {
+      if (looping) {
+        var at = position();
+        if (at < pad) jump(at + count);
+        else if (at >= pad + count) jump(at - count);
+      }
+      mark();
+    }
+
     var controls = make("div", "dkt-controls");
-    var previous = button("Previous", function () {
-      go(index - 1);
+    var previous = iconButton("previous", "Previous slides", function () {
+      halt();
+      go(position() - 1);
     });
-    var following = button("Next", function () {
-      go(index + 1);
+    var following = iconButton("next", "Next slides", function () {
+      halt();
+      go(position() + 1);
     });
-    var dots = make("div", "dkt-dots");
-    var marks = frames.map(function (frame, i) {
+    var dots = make("span", "dkt-dots");
+    var marks = slides.map(function (slide, i) {
       var dot = make("button", "dkt-dot");
       dot.type = "button";
-      dot.setAttribute("aria-label", "Slide " + (i + 1));
+      dot.setAttribute("aria-label", "Show slides from " + (i + 1));
       dot.addEventListener("click", function () {
-        go(i);
+        halt();
+        go(pad + i);
       });
       dots.appendChild(dot);
       return dot;
     });
-    var counter = make("span", "dkt-progress");
-    counter.setAttribute("role", "status");
+    var toggle = null;
     controls.appendChild(previous);
     controls.appendChild(dots);
-    controls.appendChild(counter);
     controls.appendChild(following);
-    root.appendChild(view);
-    root.appendChild(controls);
-    var index = 0;
-    function go(to) {
-      index = Math.max(0, Math.min(frames.length - 1, to));
-      frames.forEach(function (frame, i) {
-        frame.hidden = i !== index;
-        marks[i].setAttribute("aria-current", i === index ? "true" : "false");
+    if (delay) {
+      toggle = make("button", "dkt-icon dkt-toggle");
+      toggle.type = "button";
+      toggle.innerHTML = icon("pause") + icon("play");
+      toggle.addEventListener("click", function () {
+        if (stopped) {
+          stopped = false;
+          play();
+        } else {
+          halt();
+        }
       });
-      previous.disabled = index === 0;
-      following.disabled = index === frames.length - 1;
-      counter.textContent = index + 1 + "/" + frames.length;
+      controls.appendChild(toggle);
     }
-    view.addEventListener("keydown", function (event) {
-      if (event.key === "ArrowLeft") go(index - 1);
-      else if (event.key === "ArrowRight") go(index + 1);
-      else return;
+    root.appendChild(controls);
+
+    function mark() {
+      var at = current();
+      marks.forEach(function (dot, i) {
+        dot.setAttribute("aria-current", i === at ? "true" : "false");
+      });
+      previous.disabled = !looping && position() <= 0;
+      following.disabled = !looping && position() >= last();
+    }
+    function label(playing) {
+      if (!toggle) return;
+      toggle.setAttribute("aria-label", playing ? "Pause the automatic scroll" : "Play the automatic scroll");
+      toggle.setAttribute("data-state", playing ? "playing" : "paused");
+    }
+    function tick() {
+      if (held || document.hidden) return;
+      go(!looping && position() >= last() ? 0 : position() + 1);
+    }
+    function play() {
+      if (!delay || timer || stopped) return;
+      timer = setInterval(tick, delay);
+      label(true);
+    }
+    function halt() {
+      stopped = true;
+      clearInterval(timer);
+      timer = null;
+      label(false);
+    }
+
+    track.addEventListener(
+      "scroll",
+      function () {
+        mark();
+        clearTimeout(settling);
+        settling = setTimeout(settle, 140);
+      },
+      { passive: true }
+    );
+    track.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+      halt();
+      go(position() + (event.key === "ArrowRight" ? 1 : -1));
       event.preventDefault();
     });
-    var from = null;
-    view.addEventListener("pointerdown", function (event) {
-      from = event.clientX;
+    track.addEventListener("pointerdown", halt);
+    root.addEventListener("mouseenter", function () {
+      held = true;
     });
-    view.addEventListener("pointerup", function (event) {
-      if (from !== null && Math.abs(event.clientX - from) > 50) go(index + (event.clientX < from ? 1 : -1));
-      from = null;
+    root.addEventListener("mouseleave", function () {
+      held = false;
     });
-    go(0);
+    root.addEventListener("focusin", function () {
+      held = true;
+    });
+    root.addEventListener("focusout", function () {
+      held = false;
+    });
+    track.addEventListener("click", function (event) {
+      var zoom = event.target.closest(".dkt-zoom");
+      if (!zoom) return;
+      halt();
+      showLarger(zoom.querySelector("img"));
+    });
+    window.addEventListener("resize", function () {
+      jump(pad + current());
+      mark();
+    });
+
+    root.classList.add("dkt-ready");
+    jump(pad);
+    mark();
+    label(!stopped);
+    play();
     return true;
   }
 

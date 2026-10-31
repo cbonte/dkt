@@ -48,11 +48,29 @@ pre.dkt-copyable:hover .dkt-copy, .dkt-copy:focus-visible, .dkt-copy[data-done] 
 .dkt-result { margin: 8px 0; font-weight: 600; }
 .dkt-after[hidden] { display: none; }
 
-/* Carousel */
-.dkt-ready[data-widget="carousel"] .dkt-viewport { border: 1px solid var(--line, #e3e6eb); border-radius: 10px; padding: 16px; }
-.dkt-slide[hidden] { display: none; }
-.dkt-slide img { max-width: 100%; height: auto; }
-.dkt-controls { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
-.dkt-dots { display: flex; gap: 6px; }
-.dkt-dot { width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; background: var(--line, #e3e6eb); cursor: pointer; }
-.dkt-dot[aria-current="true"] { background: var(--accent, #c2410c); }
+/* Carousel: a row of slides that the page scrolls, with the buttons added by the script */
+.dkt-widget[data-widget="carousel"] { --dkt-gap: 14px; --dkt-n: var(--dkt-show, 1); display: grid; gap: 10px; min-width: 0; }
+@media (min-width: 640px) { .dkt-widget[data-widget="carousel"] { --dkt-n: var(--dkt-show-m, var(--dkt-show, 1)); } }
+@media (min-width: 960px) { .dkt-widget[data-widget="carousel"] { --dkt-n: var(--dkt-show-l, var(--dkt-show-m, var(--dkt-show, 1))); } }
+.dkt-track { min-width: 0; display: flex; gap: var(--dkt-gap); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 10px; }
+.dkt-track::-webkit-scrollbar { display: none; }
+.dkt-track:focus-visible { outline: 2px solid var(--accent, #c2410c); outline-offset: 3px; }
+.dkt-slide { flex: 0 0 calc((100% - (var(--dkt-n) - 1) * var(--dkt-gap)) / var(--dkt-n)); scroll-snap-align: start; min-width: 0; }
+.dkt-slide > :first-child { margin-top: 0; }
+.dkt-slide > :last-child { margin-bottom: 0; }
+.dkt-slide figure { margin: 0; display: grid; gap: 8px; }
+.dkt-slide figure img { display: block; max-width: 100%; height: auto; }
+.dkt-slide figcaption { font-size: 13px; color: var(--muted, #5b6370); }
+.dkt-controls { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.dkt-dots { display: flex; gap: 8px; }
+.dkt-dot { width: 11px; height: 11px; padding: 0; border: 1px solid var(--muted, #5b6370); border-radius: 50%; background: transparent; cursor: pointer; }
+.dkt-dot[aria-current="true"] { background: var(--accent, #c2410c); border-color: var(--accent, #c2410c); }
+.dkt-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 30px; padding: 0; color: var(--link, var(--accent, #c2410c)); background: var(--surface, #f6f7f9); border: 1px solid var(--line, #e3e6eb); border-radius: 8px; cursor: pointer; }
+.dkt-icon:hover:not(:disabled) { background: var(--surface2, #f3f4f7); }
+.dkt-icon:disabled { color: var(--muted, #5b6370); cursor: default; opacity: .5; }
+.dkt-toggle[data-state="playing"] svg:nth-child(2), .dkt-toggle[data-state="paused"] svg:nth-child(1) { display: none; }
+.dkt-zoom { display: block; width: 100%; padding: 0; border: 0; border-radius: 10px; background: none; cursor: zoom-in; }
+.dkt-zoom:focus-visible { outline: 2px solid var(--accent, #c2410c); outline-offset: 2px; }
+.dkt-lightbox { max-width: min(96vw, 1400px); padding: 0; border: 0; border-radius: 10px; background: transparent; }
+.dkt-lightbox::backdrop { background: rgb(0 0 0 / .75); }
+.dkt-lightbox img { display: block; max-width: 100%; max-height: 92vh; margin: auto; border-radius: 10px; }

@@ -116,17 +116,60 @@ fn target<'a>(dest: &CowStr<'a>, rewrite: Option<Rewrite<'_>>) -> CowStr<'a> {
 
 /// The tag that opens a widget. The script of the theme builds the component from what it holds.
 /// A widget with no `id` is named by its place on the page.
+/// A carousel is cut into its slides here, so that the page scrolls them without the script.
 fn widget_open(note: &Annotation, position: usize) -> String {
     let name = note.get("widget").unwrap_or_default();
     let id = note
         .get("id")
         .map(str::to_string)
         .unwrap_or_else(|| format!("w{position}"));
-    let answer = note
-        .get("answer")
-        .map(|a| format!(r#" data-answer="{a}""#))
-        .unwrap_or_default();
-    format!("<div class=\"dkt-widget\" data-widget=\"{name}\" data-id=\"{id}\"{answer}>\n")
+    let mut tag = format!("<div class=\"dkt-widget\" data-widget=\"{name}\" data-id=\"{id}\"");
+    if let Some(answer) = note.get("answer") {
+        tag.push_str(&format!(" data-answer=\"{answer}\""));
+    }
+    if name != "carousel" {
+        tag.push_str(">\n");
+        return tag;
+    }
+    let shown = shown(note);
+    tag.push_str(&format!(
+        " data-show=\"{} {} {}\"",
+        shown[0], shown[1], shown[2]
+    ));
+    if let Some(delay) = note.get("autoplay") {
+        tag.push_str(&format!(" data-autoplay=\"{delay}\""));
+    }
+    for flag in ["loop", "zoom"] {
+        if note.has(flag) {
+            tag.push_str(&format!(" data-{flag}"));
+        }
+    }
+    tag.push_str(&format!(
+        " style=\"--dkt-show:{};--dkt-show-m:{};--dkt-show-l:{}\">\n<div class=\"dkt-track\" tabindex=\"0\">\n<div class=\"dkt-slide\">\n",
+        shown[0], shown[1], shown[2]
+    ));
+    tag
+}
+
+/// The figure, its image loaded on request when it comes after the slides that a carousel shows at once.
+fn lazy_after(figure: String, carousel: Option<(usize, usize)>) -> String {
+    match carousel {
+        Some((slide, most)) if slide > most => figure.replace("<img ", "<img loading=\"lazy\" "),
+        _ => figure,
+    }
+}
+
+/// How many slides a carousel shows at the 3 widths of page: the count that each width gets, the
+/// last one given standing for the widths after it.
+fn shown(note: &Annotation) -> [usize; 3] {
+    let given: Vec<usize> = note
+        .get("show")
+        .unwrap_or("1")
+        .split_whitespace()
+        .filter_map(|n| n.parse().ok())
+        .collect();
+    let at = |k: usize| given.get(k).or(given.last()).copied().unwrap_or(1);
+    [at(0), at(1), at(2)]
 }
 
 /// Renders `md` as a page. `rewrite` sees the target of every link and image.
@@ -150,6 +193,8 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
     let mut page_notes = Vec::new();
     let mut under: Option<String> = None;
     let mut widgets = 0;
+    // The carousel that is open, with the number of its slides and the most it shows at once.
+    let mut carousel: Option<(usize, usize)> = None;
     let mut open_widgets = 0;
     let mut i = 0;
     while i < events.len() {
@@ -226,7 +271,7 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                             .figure()
                             .or_else(|| hooks.figure.and_then(|f| f(&note)))
                         {
-                            body.push(Event::Html(CowStr::from(figure)));
+                            body.push(Event::Html(CowStr::from(lazy_after(figure, carousel))));
                         }
                     }
                     Kind::Replace => {
@@ -247,12 +292,21 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                     Kind::Widget => {
                         widgets += 1;
                         open_widgets += 1;
+                        if note.get("widget") == Some("carousel") {
+                            let most = shown(&note).into_iter().max().unwrap_or(1);
+                            carousel = Some((1, most));
+                        }
                         body.push(Event::Html(CowStr::from(widget_open(&note, widgets))));
                     }
                     Kind::End => {
                         if open_widgets > 0 {
                             open_widgets -= 1;
-                            body.push(Event::Html(CowStr::from("</div>\n")));
+                            let close = if carousel.take().is_some() {
+                                "</div>\n</div>\n</div>\n"
+                            } else {
+                                "</div>\n"
+                            };
+                            body.push(Event::Html(CowStr::from(close)));
                         }
                     }
                     Kind::Alias => {
@@ -280,6 +334,16 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                     .collect();
                 body.push(Event::Html(CowStr::from(crate::diagram::to_svg(&text))));
                 i = end + 1;
+            }
+            // A thematic break cuts the slides of a carousel.
+            Event::Rule if carousel.is_some() => {
+                if let Some((slide, _)) = carousel.as_mut() {
+                    *slide += 1;
+                }
+                body.push(Event::Html(CowStr::from(
+                    "</div>\n<div class=\"dkt-slide\">\n",
+                )));
+                i += 1;
             }
             // A block that draws with box characters is marked, so that a theme can close the gaps
             // between its lines.

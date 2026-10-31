@@ -12,13 +12,13 @@ the blocks of the widget
 The blocks go through the same rendering as the rest of the page, so headings keep their anchors and
 links keep their targets. Without JavaScript the blocks stay in place and the page reads the same.
 
-| Widget      | Blocks it holds                          | Keys           |
-| ----------- | ---------------------------------------- | -------------- |
-| `tabs`      | a heading for each tab, and what follows | `id`           |
-| `checklist` | a list of tasks                          | `id`           |
-| `steps`     | an ordered list                          | `id`           |
-| `quiz`      | a question, a list of choices, an answer | `id`, `answer` |
-| `carousel`  | slides, separated by thematic breaks     | `id`           |
+| Widget      | Blocks it holds                          | Keys                                     |
+| ----------- | ---------------------------------------- | ---------------------------------------- |
+| `tabs`      | a heading for each tab, and what follows | `id`                                     |
+| `checklist` | a list of tasks                          | `id`                                     |
+| `steps`     | an ordered list                          | `id`                                     |
+| `quiz`      | a question, a list of choices, an answer | `id`, `answer`                           |
+| `carousel`  | slides, separated by thematic breaks     | `id`, `show`, `autoplay`, `loop`, `zoom` |
 
 `id` names the widget for what the reader did, such as the box ticked or the tab chosen. It is
 letters, digits, hyphens and underscores. A widget with no `id` is named by its place on the page,
@@ -121,6 +121,55 @@ A thematic break (3 hyphens on a line) cuts the slides.
 **Publish.** `dkt site` builds the pages, the search and the menus.
 
 <!-- site: end -->
+
+The slides are a row that the page scrolls, so the row scrolls by touch and by the keys of the
+arrows, and it scrolls without JavaScript. Options on the annotation set the rest.
+
+| Option          | Effect                                                                   |
+| --------------- | ------------------------------------------------------------------------ |
+| `show="1 2 3"`  | the slides in view on a narrow page, from 640 pixels and from 960 pixels |
+| `loop`          | the row never ends                                                       |
+| `autoplay=4500` | scroll by itself, with this delay in milliseconds, and a button to pause |
+| `zoom`          | a click on a picture opens it larger                                     |
+
+The automatic scroll stops when the pointer or the focus is in the carousel, when the tab is hidden,
+and for good after the reader acts on it. It does not start for a reader whose system asks for less
+motion.
+
+<!-- site: widget carousel id=pictures show="1 2 3" loop autoplay=4500 zoom -->
+
+<!-- site: figure name=favicon alt="The mark of dkt, first" caption="One" -->
+
+---
+
+<!-- site: figure name=favicon alt="The mark of dkt, second" caption="Two" -->
+
+---
+
+<!-- site: figure name=favicon alt="The mark of dkt, third" caption="Three" -->
+
+---
+
+<!-- site: figure name=favicon alt="The mark of dkt, fourth" caption="Four" -->
+
+---
+
+<!-- site: figure name=favicon alt="The mark of dkt, fifth" caption="Five" -->
+
+<!-- site: end -->
+
+A picture comes from `figure`. The images after the ones in view are loaded when the reader gets
+near them.
+
+```
+<!-- site: widget carousel id=pictures show="1 2 3" loop autoplay=4500 zoom -->
+<!-- site: figure name=favicon alt="The first picture" caption="One" -->
+
+---
+
+<!-- site: figure name=favicon alt="The second picture" caption="Two" -->
+<!-- site: end -->
+```
 
 ## Copy button
 
