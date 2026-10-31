@@ -135,13 +135,6 @@ fn classify(g: &Grid, r: isize, c: isize) -> Cell {
     }
 }
 
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 fn number(x: f64) -> String {
     let s = format!("{x:.1}");
     s.trim_end_matches('0').trim_end_matches('.').to_string()
@@ -371,7 +364,7 @@ pub fn to_svg(text: &str) -> String {
                 row_words.push(format!(
                     "<tspan x=\"{}\">{}</tspan>",
                     xs.join(" "),
-                    escape(run)
+                    crate::escape::html(run)
                 ));
                 run.clear();
             }
@@ -495,7 +488,7 @@ pub fn to_svg(text: &str) -> String {
     ));
     out.push_str(&format!(
         "<title>Diagram</title><desc>{}</desc>",
-        escape(text.trim_end_matches('\n'))
+        crate::escape::html(text.trim_end_matches('\n'))
     ));
     let strokes = chain(&segments, &rises, &falls, &tips);
     if !strokes.is_empty() {

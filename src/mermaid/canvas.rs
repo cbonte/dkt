@@ -266,13 +266,6 @@ fn number(x: f64) -> String {
     s.strip_suffix(".0").map_or(s.clone(), str::to_string)
 }
 
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 /// The path of a triangle with its tip toward `heading`, in the cell at `(x, y)`.
 fn triangle(heading: char, x: f64, y: f64) -> String {
     let (cx, cy) = (x + CELL_W / 2.0, y + CELL_H / 2.0);
@@ -350,7 +343,7 @@ impl Canvas {
                     "<text y=\"{}\"><tspan x=\"{}\">{}</tspan></text>",
                     number(y + BASELINE),
                     xs.join(" "),
-                    escape(&text)
+                    crate::escape::html(&text)
                 ));
                 run.clear();
             };
@@ -448,7 +441,7 @@ impl Canvas {
         };
         format!(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {w} {h}\" width=\"{w}\" height=\"{h}\" role=\"img\" aria-label=\"Diagram\" font-family=\"ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace\" font-size=\"13\"><title>Diagram</title><desc>{}</desc>{}{}{}{}<g fill=\"currentColor\" xml:space=\"preserve\">{words}</g></svg>",
-            escape(source.trim_end()),
+            crate::escape::html(source.trim_end()),
             stroke(&normal, "1.2", ""),
             stroke(&thick, "2.4", ""),
             stroke(&dotted, "1.2", " stroke-dasharray=\"2 3\""),

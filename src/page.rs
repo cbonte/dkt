@@ -157,13 +157,6 @@ fn draws_boxes(events: &[Event<'_>], from: usize) -> bool {
         .any(|e| matches!(e, Event::Text(t) if t.chars().any(is_box)))
 }
 
-fn html_escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 /// Index of the first event from `from` on that satisfies `is_end`.
 fn find_end(events: &[Event<'_>], from: usize, is_end: impl Fn(&Event<'_>) -> bool) -> usize {
     (from..events.len())
@@ -191,7 +184,7 @@ fn widget_open(note: &Annotation, position: usize) -> String {
     // What the annotation gives is checked, and the script reads it from the attributes.
     for (key, value) in &note.args {
         if !matches!(key.as_str(), "widget" | "id" | "show") {
-            tag.push_str(&format!(" data-{key}=\"{}\"", html_escape(value)));
+            tag.push_str(&format!(" data-{key}=\"{}\"", crate::escape::html(value)));
         }
     }
     for flag in &note.flags {
@@ -480,13 +473,13 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                     CodeBlockKind::Fenced(info) => info
                         .split_whitespace()
                         .next()
-                        .map(|lang| format!(" class=\"language-{}\"", html_escape(lang)))
+                        .map(|lang| format!(" class=\"language-{}\"", crate::escape::html(lang)))
                         .unwrap_or_default(),
                     CodeBlockKind::Indented => String::new(),
                 };
                 body.push(Event::Html(CowStr::from(format!(
                     "<pre class=\"box\"><code{class}>{}</code></pre>\n",
-                    html_escape(&text)
+                    crate::escape::html(&text)
                 ))));
                 i = end + 1;
             }

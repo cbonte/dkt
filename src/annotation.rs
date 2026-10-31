@@ -161,27 +161,24 @@ impl Annotation {
     pub fn figure(&self) -> Option<String> {
         let src = self.get("src")?;
         let alt = self.get("alt").unwrap_or_default();
-        let image = format!(r#"<img src="{}" alt="{}">"#, escape(src), escape(alt));
+        let image = format!(
+            r#"<img src="{}" alt="{}">"#,
+            crate::escape::html(src),
+            crate::escape::html(alt)
+        );
         let picture = match self.get("dark") {
             Some(dark) => format!(
                 r#"<picture><source media="(prefers-color-scheme: dark)" srcset="{}">{image}</picture>"#,
-                escape(dark)
+                crate::escape::html(dark)
             ),
             None => image,
         };
         let caption = self
             .get("caption")
-            .map(|c| format!("<figcaption>{}</figcaption>", escape(c)))
+            .map(|c| format!("<figcaption>{}</figcaption>", crate::escape::html(c)))
             .unwrap_or_default();
         Some(format!("<figure>{picture}{caption}</figure>\n"))
     }
-}
-
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
 }
 
 /// The text inside the comment, when `html` is exactly one comment.

@@ -149,16 +149,6 @@ impl State {
     }
 }
 
-fn escape(c: char, out: &mut String) {
-    match c {
-        '&' => out.push_str("&amp;"),
-        '<' => out.push_str("&lt;"),
-        '>' => out.push_str("&gt;"),
-        '"' => out.push_str("&quot;"),
-        c => out.push(c),
-    }
-}
-
 /// The text as HTML, where each run of the same look is a `span`. The sequences that are not
 /// about the look of the text, such as the ones that move the cursor, are dropped.
 pub fn to_html(text: &str) -> String {
@@ -172,7 +162,7 @@ pub fn to_html(text: &str) -> String {
     let mut chars = text.chars().peekable();
     while let Some(c) = chars.next() {
         if c != ESC || chars.peek() != Some(&'[') {
-            escape(c, &mut out);
+            crate::escape::push(c, &mut out);
             continue;
         }
         chars.next();

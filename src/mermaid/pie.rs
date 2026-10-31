@@ -108,13 +108,6 @@ const SLICES: [&str; 8] = [
     "#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#b07aa1", "#76b7b2", "#edc948", "#9c755f",
 ];
 
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 /// A `pie` block as an SVG element: the pie, and a legend with the share of each slice.
 pub fn svg(code: &str) -> Option<String> {
     let pie = parse(code)?;
@@ -157,8 +150,8 @@ pub fn svg(code: &str) -> Option<String> {
             y - 10.0,
             SLICES[i % SLICES.len()],
             y,
-            escape(label),
-            escape(&figure)
+            crate::escape::html(label),
+            crate::escape::html(&figure)
         ));
     }
     let height = (title_height + 2.0 * radius + 20.0)
@@ -169,13 +162,13 @@ pub fn svg(code: &str) -> Option<String> {
         .map(|t| {
             format!(
                 "<text x=\"{cx}\" y=\"18\" text-anchor=\"middle\" font-weight=\"600\">{}</text>",
-                escape(t)
+                crate::escape::html(t)
             )
         })
         .unwrap_or_default();
     Some(format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 520 {height}\" width=\"520\" height=\"{height}\" role=\"img\" aria-label=\"Pie chart\" font-family=\"system-ui, sans-serif\" font-size=\"13\" fill=\"currentColor\"><title>Pie chart</title><desc>{}</desc>{title}{shapes}{legend}</svg>",
-        escape(code.trim_end())
+        crate::escape::html(code.trim_end())
     ))
 }
 

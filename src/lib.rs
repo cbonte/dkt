@@ -6,6 +6,7 @@ pub mod ansi_html;
 pub mod cli_extras;
 pub mod cmd;
 pub mod diagram;
+pub mod escape;
 pub mod format;
 pub mod haproxy;
 pub mod highlight;
