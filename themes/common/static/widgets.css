@@ -148,3 +148,10 @@ html pre.dkt-screen code { background: none; padding: 0; color: inherit; font: i
 .dkt-since { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; font-size: 14px; }
 .dkt-since select { padding: 4px 8px; font: inherit; color: var(--fg, inherit); background: var(--bg, transparent); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; }
 .dkt-widget [hidden] { display: none !important; }
+
+/* Preview: the card of a page, at the foot of a link */
+.dkt-preview { position: absolute; z-index: 60; width: max-content; max-width: min(360px, calc(100vw - 16px)); padding: 10px 12px; color: var(--fg, inherit); background: var(--bg, #fff); border: 1px solid var(--line, #e3e6eb); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); font-size: 13px; line-height: 1.45; pointer-events: none; }
+.dkt-preview[hidden] { display: none; }
+.dkt-preview strong { display: block; }
+.dkt-preview .dkt-where { display: block; color: var(--muted, #5b6370); font-size: 12px; }
+.dkt-preview p { margin: 6px 0 0; color: var(--soft, inherit); }

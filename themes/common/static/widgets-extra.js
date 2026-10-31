@@ -756,6 +756,105 @@
     return true;
   }
 
+  // A card with the title and the description of a page, when the pointer rests on a link to it.
+  // The cards come from the index that the search reads, so no page is fetched.
+  dkt.startPreviews = function () {
+    if (!dkt.script || (window.matchMedia && matchMedia("(pointer: coarse)").matches)) return;
+    var base = dkt.script.replace(/widgets\.js(\?.*)?$/, "");
+    var root = new URL(base).pathname;
+    var index = null;
+    var loading = null;
+    function entries() {
+      if (index) return Promise.resolve(index);
+      if (!loading) {
+        loading = fetch(base + "search.json")
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (list) {
+            index = list;
+            return list;
+          })
+          .catch(function () {
+            index = [];
+            return index;
+          });
+      }
+      return loading;
+    }
+    var card = make("div", "dkt-preview");
+    card.setAttribute("role", "tooltip");
+    card.hidden = true;
+    document.body.appendChild(card);
+    var timer = null;
+    var current = null;
+    function hide() {
+      clearTimeout(timer);
+      card.hidden = true;
+      current = null;
+    }
+    function candidate(link) {
+      var target;
+      try {
+        target = new URL(link.href);
+      } catch (e) {
+        return false;
+      }
+      if (target.origin !== location.origin || target.pathname.indexOf(root) !== 0) return false;
+      if (target.pathname === location.pathname) return false;
+      if (link.hasAttribute("download") || link.closest(".dkt-preview, .top, header, footer, .side")) return false;
+      return true;
+    }
+    function show(link) {
+      entries().then(function (list) {
+        if (current !== link) return;
+        var target = new URL(link.href);
+        var page = list.filter(function (entry) {
+          return entry.u === target.pathname && entry.l === 1;
+        })[0];
+        var section = target.hash
+          ? list.filter(function (entry) {
+              return entry.u === target.pathname + target.hash;
+            })[0]
+          : null;
+        var entry = section || page;
+        if (!entry) return;
+        card.textContent = "";
+        card.appendChild(make("strong", "", entry.t));
+        var where = section && page ? page.t : entry.b;
+        if (where && where !== entry.t) card.appendChild(make("span", "dkt-where", where));
+        var text = entry.d || (page && page.d) || "";
+        if (text) card.appendChild(make("p", "", text.length > 220 ? text.slice(0, 217) + "..." : text));
+        card.hidden = false;
+        var box = link.getBoundingClientRect();
+        var width = card.offsetWidth;
+        var left = Math.max(8, Math.min(window.scrollX + box.left, window.scrollX + document.documentElement.clientWidth - width - 8));
+        var below = box.bottom + card.offsetHeight + 12 < window.innerHeight;
+        card.style.left = left + "px";
+        card.style.top = (below ? window.scrollY + box.bottom + 6 : window.scrollY + box.top - card.offsetHeight - 6) + "px";
+      });
+    }
+    function over(event) {
+      var link = event.target.closest && event.target.closest("a[href]");
+      if (!link || link === current || !candidate(link)) return;
+      hide();
+      current = link;
+      timer = setTimeout(function () {
+        show(link);
+      }, 350);
+    }
+    document.addEventListener("mouseover", over);
+    document.addEventListener("focusin", over);
+    document.addEventListener("mouseout", function (event) {
+      if (current && !(event.relatedTarget && current.contains(event.relatedTarget))) hide();
+    });
+    document.addEventListener("focusout", hide);
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") hide();
+    });
+    window.addEventListener("scroll", hide, { passive: true });
+  };
+
   builders.table = table;
   builders.compare = compare;
   builders.diff = diff;

@@ -72,6 +72,10 @@ pub struct Site {
     /// Whether the build writes the index that a theme searches. On unless the site turns it off.
     #[serde(default = "default_search")]
     pub search: bool,
+    /// Whether a link to another page shows a card with the title and the description of the page
+    /// when the pointer rests on it. Off unless the site turns it on, and it needs the index.
+    #[serde(default)]
+    pub previews: bool,
 }
 
 fn default_search() -> bool {

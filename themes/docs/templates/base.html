@@ -10,7 +10,8 @@
 <link rel="stylesheet" href="{{ site.base_path }}/docs.css">
 <link rel="stylesheet" href="{{ site.base_path }}/content.css">
 <link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
-{% if site.colors_css %}<style>{{ site.colors_css | safe }}</style>{% endif %}
+{% if site.previews %}<meta name="dkt-previews" content="on">
+{% endif %}{% if site.colors_css %}<style>{{ site.colors_css | safe }}</style>{% endif %}
 {% block head %}{% endblock %}
 </head>
 <body>

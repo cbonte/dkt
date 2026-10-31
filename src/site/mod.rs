@@ -293,6 +293,7 @@ struct SiteView<'a> {
     repo: &'a str,
     colors_css: String,
     search: bool,
+    previews: bool,
     nav: Vec<NavView>,
     sections: BTreeMap<String, SectionView>,
 }
@@ -687,6 +688,7 @@ pub fn build(opts: &Options) -> Result<Report> {
         repo: &cfg.site.repo,
         colors_css: colors_css(&cfg.colors)?,
         search: cfg.site.search,
+        previews: cfg.site.previews && cfg.site.search,
         nav: cfg
             .nav
             .iter()

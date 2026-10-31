@@ -9,7 +9,8 @@
 <link rel="stylesheet" href="{{ site.base_path }}/plain.css">
 <link rel="stylesheet" href="{{ site.base_path }}/content.css">
 <link rel="stylesheet" href="{{ site.base_path }}/widgets.css">
-</head>
+{% if site.previews %}<meta name="dkt-previews" content="on">
+{% endif %}</head>
 <body>
 <header>
 <a class="brand" href="{{ site.base_path }}/">{% include "partials/brand.html" %}</a>

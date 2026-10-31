@@ -65,7 +65,7 @@ It is a TOML file.
 
 | Table         | What it says                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `[site]`      | `title`, `description`, `base_url`, `repo`, `branch`, `templates`, `static`, `theme`, `search`                     |
+| `[site]`      | `title`, `description`, `base_url`, `repo`, `branch`, `templates`, `static`, `theme`, `search`, `previews`         |
 | `[[nav]]`     | a menu entry: `name`, `url`, and `section` to keep it current in a section                                         |
 | `[home]`      | the page at the root: its `template`, and a `src` document that the template shows                                 |
 | `[[section]]` | a group of pages with an index of its own: `name`, `url`, `title`, `description`, `template`, `sidebar`            |
@@ -142,9 +142,9 @@ In the `docs` theme, every heading below the title is a link to itself, with a b
 address when the pointer is over it. A wide table scrolls in its own box, and a long entry of a menu
 ends with an ellipsis and shows its text as its title.
 
-Every built-in theme styles the alerts and the footnotes of a document with `content.css`. It carries
-[widgets](../examples/widgets.md) and a copy button on the code blocks, with the files `widgets.css`
-and `widgets.js`.
+Every built-in theme styles the alerts and the footnotes of a document with `content.css`. It
+carries [widgets](../examples/widgets.md) and a copy button on the code blocks, with the files
+`widgets.css` and `widgets.js`.
 
 `docs` and `paper` carry a switch between the light and the dark theme. Without a choice, all 3
 follow the system.
@@ -242,6 +242,15 @@ The palette matches what is typed against the titles.
 | a result under the part of the site being read ranks above the same result elsewhere       |
 
 A theme without a palette ignores the file. A template of a site can read it with `fetch`.
+
+## Previews
+
+`previews = true` in `[site]` makes a link to another page of the site show a card with the title
+and the description of the page, and the section above it for a link to a heading, when the pointer
+rests on the link or the focus is on it. The cards come from the index of the search, so the site
+needs it, and a page that is not fetched. A touch screen gets no card. A template that is not one of
+the built-in themes adds `<meta name="dkt-previews" content="on">` to its `head`, and loads the
+script of the widgets.
 
 ## Templates
 

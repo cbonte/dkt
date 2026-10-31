@@ -609,12 +609,14 @@
       if (builders[root.getAttribute("data-widget")]) build(root);
       else later.push(root);
     });
-    if (!later.length || !script) return;
+    var previews = !!document.querySelector('meta[name="dkt-previews"]');
+    if ((!later.length && !previews) || !script) return;
     var extra = document.createElement("script");
     extra.src = script.replace(/widgets\.js(\?.*)?$/, "widgets-extra.js");
     extra.onload = function () {
       later.forEach(build);
       copyButtons();
+      if (previews && dkt.startPreviews) dkt.startPreviews();
     };
     document.head.appendChild(extra);
   }

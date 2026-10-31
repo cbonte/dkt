@@ -5,6 +5,7 @@ base_url = "https://cbonte.github.io/dkt"
 repo = "https://github.com/cbonte/dkt"
 branch = "master"
 static = "static"
+previews = true
 
 [[nav]]
 name = "Home"
