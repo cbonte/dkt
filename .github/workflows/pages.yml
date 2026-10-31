@@ -26,6 +26,8 @@ jobs:
           for theme in docs paper plain colours; do
             target/release/dkt site examples/themes/$theme.toml -o public/demos/themes/$theme
           done
+      - name: Leave out the markers of the builds
+        run: find public -name .dkt-site -delete
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
