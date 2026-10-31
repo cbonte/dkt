@@ -4,6 +4,9 @@ description = "The same pages, in the docs theme."
 base_url = "https://cbonte.github.io/dkt/demos/themes/docs"
 theme = "docs"
 
+[home]
+template = "index.html"
+
 [[nav]]
 name = "Home"
 url = "/"

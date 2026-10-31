@@ -4,6 +4,9 @@ description = "The same pages, in the docs theme, with its own colours."
 base_url = "https://cbonte.github.io/dkt/demos/themes/colours"
 theme = "docs"
 
+[home]
+template = "index.html"
+
 [[nav]]
 name = "Home"
 url = "/"

@@ -667,3 +667,37 @@ fn a_title_does_not_go_with_a_glob() {
         stderr(&out)
     );
 }
+
+#[test]
+fn every_theme_demo_of_the_examples_has_a_home_and_its_pages() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let tmp = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("theme-demos");
+    let mut demos = 0;
+    for entry in std::fs::read_dir(root.join("examples/themes")).expect("the demos") {
+        let file = entry.expect("an entry").path();
+        if file.extension().is_none_or(|e| e != "toml") {
+            continue;
+        }
+        let out = tmp.join(file.file_stem().expect("a name"));
+        let _ = std::fs::remove_dir_all(&out);
+        let built = std::process::Command::new(env!("CARGO_BIN_EXE_dkt"))
+            .arg("site")
+            .arg(&file)
+            .arg("-o")
+            .arg(&out)
+            .output()
+            .expect("run dkt site");
+        assert!(
+            built.status.success(),
+            "{}: {}",
+            file.display(),
+            String::from_utf8_lossy(&built.stderr)
+        );
+        for page in ["index.html", "guide/index.html", "guide/tour/index.html"] {
+            assert!(out.join(page).exists(), "{} has no {page}", file.display());
+        }
+        demos += 1;
+    }
+    assert!(demos >= 4, "{demos} demos");
+    let _ = std::fs::remove_dir_all(&tmp);
+}

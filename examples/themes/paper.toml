@@ -4,6 +4,9 @@ description = "The same pages, in the paper theme."
 base_url = "https://cbonte.github.io/dkt/demos/themes/paper"
 theme = "paper"
 
+[home]
+template = "index.html"
+
 [[nav]]
 name = "Home"
 url = "/"
