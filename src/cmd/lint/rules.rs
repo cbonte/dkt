@@ -267,8 +267,21 @@ fn check_headings(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Findi
     let mut anchor_count: HashMap<String, usize> = HashMap::new();
     let mut h1 = 0;
     let mut current: Option<(u8, usize, String)> = None;
+    // The headings of the tabs of a widget name its tabs, and the tabs of a group repeat them.
+    let mut in_tabs = false;
     for (event, range) in Parser::new_ext(src.text, parser_options()).into_offset_iter() {
         match event {
+            Event::Html(html) => {
+                if let Some(Ok(note)) = crate::annotation::from_html(&html) {
+                    match note.kind {
+                        crate::annotation::Kind::Widget => {
+                            in_tabs = note.get("widget") == Some("tabs");
+                        }
+                        crate::annotation::Kind::End => in_tabs = false,
+                        _ => {}
+                    }
+                }
+            }
             Event::Start(Tag::Heading { level, .. }) => {
                 current = Some((level as u8, range.start, String::new()));
             }
@@ -312,7 +325,7 @@ fn check_headings(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Findi
                 });
                 let count = anchor_count.entry(base.clone()).or_insert(0);
                 *count += 1;
-                if *count > 1 && enabled.contains(&Rule::HeadingDup) {
+                if *count > 1 && !in_tabs && enabled.contains(&Rule::HeadingDup) {
                     out.push(src.finding(
                         offset,
                         Rule::HeadingDup,
@@ -564,6 +577,14 @@ mod tests {
                 "7:1: heading-dup: 'B' repeats the anchor 'b'"
             ]
         );
+    }
+
+    #[test]
+    fn the_tabs_of_a_widget_may_repeat_their_names() {
+        let tabs = "<!-- site: widget tabs group=os -->\n### Linux\n\na\n\n### macOS\n\nb\n<!-- site: end -->\n\n<!-- site: widget tabs group=os -->\n### Linux\n\nc\n\n### macOS\n\nd\n<!-- site: end -->\n";
+        assert!(findings(tabs, &[Rule::HeadingDup]).is_empty());
+        let plain = "### Linux\n\na\n\n### Linux\n\nb\n";
+        assert_eq!(findings(plain, &[Rule::HeadingDup]).len(), 1);
     }
 
     #[test]

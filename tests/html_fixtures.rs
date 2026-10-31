@@ -183,7 +183,7 @@ fn a_carousel_is_cut_into_slides_with_its_options() {
     );
     let c = &page.content;
     assert!(
-        c.contains(r#"data-widget="carousel" data-id="t" data-show="1 2 2" data-autoplay="4500" data-loop data-zoom"#),
+        c.contains(r#"data-widget="carousel" data-id="t" data-autoplay="4500" data-loop data-zoom data-show="1 2 2""#),
         "{c}"
     );
     assert!(

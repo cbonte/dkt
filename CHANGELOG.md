@@ -9,6 +9,10 @@
 - site: show examples of formats, themes, widgets and terminal output in a section.
 - widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
 - html: draw Mermaid blocks as SVG figures, and pie charts as pies.
+- widget: group tabs, so that a choice made in one tab set is made in the others.
+- widget: filter and sort a table, compare 2 pictures with a slider and read a diff in 2 sides.
+- widget: draw a table as bars or lines, and turn a table into flashcards.
+- lint: let the tabs of a widget repeat their names.
 - widget: show several slides of a carousel, loop it, scroll it by itself and enlarge its pictures.
 - theme: add a copy button to the code blocks.
 - theme: close the gaps between the lines of a code block that draws boxes.

@@ -124,8 +124,14 @@ fn widget_open(note: &Annotation, position: usize) -> String {
         .map(str::to_string)
         .unwrap_or_else(|| format!("w{position}"));
     let mut tag = format!("<div class=\"dkt-widget\" data-widget=\"{name}\" data-id=\"{id}\"");
-    if let Some(answer) = note.get("answer") {
-        tag.push_str(&format!(" data-answer=\"{answer}\""));
+    // What the annotation gives is checked, and the script reads it from the attributes.
+    for (key, value) in &note.args {
+        if !matches!(key.as_str(), "widget" | "id" | "show") {
+            tag.push_str(&format!(" data-{key}=\"{}\"", html_escape(value)));
+        }
+    }
+    for flag in &note.flags {
+        tag.push_str(&format!(" data-{flag}"));
     }
     if name != "carousel" {
         tag.push_str(">\n");
@@ -136,14 +142,6 @@ fn widget_open(note: &Annotation, position: usize) -> String {
         " data-show=\"{} {} {}\"",
         shown[0], shown[1], shown[2]
     ));
-    if let Some(delay) = note.get("autoplay") {
-        tag.push_str(&format!(" data-autoplay=\"{delay}\""));
-    }
-    for flag in ["loop", "zoom"] {
-        if note.has(flag) {
-            tag.push_str(&format!(" data-{flag}"));
-        }
-    }
     tag.push_str(&format!(
         " style=\"--dkt-show:{};--dkt-show-m:{};--dkt-show-l:{}\">\n<div class=\"dkt-track\" tabindex=\"0\">\n<div class=\"dkt-slide\">\n",
         shown[0], shown[1], shown[2]

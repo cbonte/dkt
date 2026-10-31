@@ -4,6 +4,7 @@
   "use strict";
 
   var prefix = "dkt:" + location.pathname + ":";
+  var script = document.currentScript && document.currentScript.src;
 
   function load(id) {
     try {
@@ -88,6 +89,31 @@
     });
   }
 
+  // The tabs of a group, which all show the label that the reader chose in one of them.
+  var groups = {};
+
+  function readGroup(name) {
+    try {
+      return localStorage.getItem("dkt-group:" + name);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function joinGroup(name, labels, select) {
+    (groups[name] = groups[name] || []).push({ labels: labels, select: select });
+  }
+
+  function chooseInGroup(name, label, source) {
+    try {
+      localStorage.setItem("dkt-group:" + name, label);
+    } catch (e) {}
+    (groups[name] || []).forEach(function (member) {
+      var at = member.labels.indexOf(label);
+      if (member.select !== source && at >= 0) member.select(at, false, true);
+    });
+  }
+
   // One tab for each heading of the shallowest level, with the blocks that follow it.
   function tabs(root, id) {
     var children = Array.prototype.slice.call(root.children);
@@ -141,7 +167,12 @@
       tabsList.push(tab);
       return panel;
     });
-    function select(index, focus) {
+    var group = root.getAttribute("data-group");
+    var labels = tabsList.map(function (tab) {
+      return tab.textContent;
+    });
+    // `quiet` is a choice that another group of the same name made, which is not told again.
+    function select(index, focus, quiet) {
       panels.forEach(function (panel, i) {
         var on = i === index;
         panel.hidden = !on;
@@ -150,13 +181,17 @@
       });
       if (focus) tabsList[index].focus();
       save(id, index);
+      if (group && !quiet) chooseInGroup(group, labels[index], select);
     }
     var start = load(id);
+    var chosen = group ? labels.indexOf(readGroup(group)) : -1;
+    if (chosen >= 0) start = chosen;
     var target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
     panels.forEach(function (panel, i) {
       if (target && panel.contains(target)) start = i;
     });
-    select(typeof start === "number" && start < panels.length ? start : 0, false);
+    if (group) joinGroup(group, labels, select);
+    select(typeof start === "number" && start < panels.length ? start : 0, false, true);
     return true;
   }
 
@@ -546,17 +581,42 @@
 
   var builders = { tabs: tabs, checklist: checklist, steps: steps, quiz: quiz, carousel: carousel };
 
+  // The widgets that another file builds, which a page loads only when it holds one.
+  window.dkt = {
+    builders: builders,
+    make: make,
+    button: button,
+    load: load,
+    save: save,
+    progress: progress,
+    script: script,
+    copyButtons: copyButtons,
+  };
+
+  function build(root) {
+    var build = builders[root.getAttribute("data-widget")];
+    try {
+      if (build && build(root, root.getAttribute("data-id"))) root.classList.add("dkt-ready");
+    } catch (e) {
+      if (window.console) console.error(e);
+    }
+  }
+
   function start() {
     copyButtons();
-    var widgets = document.querySelectorAll(".dkt-widget");
-    Array.prototype.forEach.call(widgets, function (root) {
-      var build = builders[root.getAttribute("data-widget")];
-      try {
-        if (build && build(root, root.getAttribute("data-id"))) root.classList.add("dkt-ready");
-      } catch (e) {
-        if (window.console) console.error(e);
-      }
+    var later = [];
+    Array.prototype.forEach.call(document.querySelectorAll(".dkt-widget"), function (root) {
+      if (builders[root.getAttribute("data-widget")]) build(root);
+      else later.push(root);
     });
+    if (!later.length || !script) return;
+    var extra = document.createElement("script");
+    extra.src = script.replace(/widgets\.js(\?.*)?$/, "widgets-extra.js");
+    extra.onload = function () {
+      later.forEach(build);
+      copyButtons();
+    };
+    document.head.appendChild(extra);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);

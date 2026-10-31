@@ -22,8 +22,68 @@ pub enum Kind {
     Widget,
 }
 
-/// The components a `widget` annotation can name.
-pub const WIDGETS: [&str; 5] = ["tabs", "checklist", "quiz", "steps", "carousel"];
+/// The components a `widget` annotation can name, with the keys and the flags each one takes
+/// besides `id`.
+pub const WIDGETS: [(&str, &[&str], &[&str]); 15] = [
+    ("tabs", &["group"], &[]),
+    ("checklist", &[], &[]),
+    ("quiz", &["answer"], &[]),
+    ("steps", &[], &[]),
+    ("carousel", &["show", "autoplay"], &["loop", "zoom"]),
+    ("table", &[], &[]),
+    ("compare", &[], &[]),
+    ("diff", &[], &[]),
+    ("chart", &["type"], &[]),
+    ("flashcards", &[], &[]),
+    ("annotated", &["pins"], &[]),
+    ("builder", &[], &[]),
+    ("replay", &["speed"], &[]),
+    ("since", &[], &[]),
+    ("progress", &[], &[]),
+];
+
+/// The names of the widgets.
+pub fn widget_names() -> Vec<&'static str> {
+    WIDGETS.iter().map(|(name, _, _)| *name).collect()
+}
+
+/// The widget that an annotation names, with what it takes.
+fn widget_of(
+    annotation: &Annotation,
+) -> Option<&'static (
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+)> {
+    let name = annotation.get("widget")?;
+    WIDGETS.iter().find(|(n, _, _)| *n == name)
+}
+
+/// How an annotation is called in a message: the widget it names, else its kind.
+fn owner(kind: Kind, annotation: &Annotation) -> String {
+    match annotation.get("widget") {
+        Some(name) if kind == Kind::Widget => name.to_string(),
+        _ => kind.name().to_string(),
+    }
+}
+
+/// True for a word of letters, digits, hyphens and underscores.
+fn is_name(word: &str) -> bool {
+    !word.is_empty()
+        && word
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+}
+
+/// The kinds of chart.
+const CHART_TYPES: [&str; 2] = ["bar", "line"];
+
+/// The most pins on a picture.
+const MAX_PINS: usize = 50;
+
+/// The slowest and the fastest replay of a terminal session.
+const MIN_SPEED: f64 = 0.25;
+const MAX_SPEED: f64 = 8.0;
 
 /// The most slides a carousel shows at once.
 const MAX_SHOWN: usize = 6;
@@ -58,14 +118,13 @@ impl Kind {
             Kind::Figure | Kind::Replace => &["name", "src", "dark", "alt", "caption"],
             Kind::End => &[],
             Kind::Alias => &["words"],
-            Kind::Widget => &["id", "answer", "show", "autoplay"],
+            Kind::Widget => &["id"],
         }
     }
 
     fn flags(self) -> &'static [&'static str] {
         match self {
             Kind::Page => &["hide", "no-search"],
-            Kind::Widget => &["loop", "zoom"],
             _ => &[],
         }
     }
@@ -195,26 +254,43 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
     };
     for word in words {
         if kind == Kind::Widget && !annotation.args.contains_key("widget") && !word.contains('=') {
-            if !WIDGETS.contains(&word.as_str()) {
+            if !WIDGETS.iter().any(|(name, _, _)| *name == word) {
                 return Err(format!(
                     "unknown widget '{word}', expected one of {}",
-                    WIDGETS.join(", ")
+                    widget_names().join(", ")
                 ));
             }
             annotation.args.insert("widget".to_string(), word);
             continue;
         }
+        let widget = widget_of(&annotation);
+        let takes_key = |key: &str| {
+            kind.keys().contains(&key)
+                || widget.is_some_and(|(_, keys, _)| kind == Kind::Widget && keys.contains(&key))
+        };
+        let takes_flag = |flag: &str| {
+            kind.flags().contains(&flag)
+                || widget.is_some_and(|(_, _, flags)| kind == Kind::Widget && flags.contains(&flag))
+        };
         match word.split_once('=') {
-            Some((key, value)) if kind.keys().contains(&key) => {
+            Some((key, value)) if takes_key(key) => {
                 annotation.args.insert(key.to_string(), value.to_string());
             }
             Some((key, _)) => {
-                return Err(format!("'{}' does not take '{key}'", kind.name()));
+                return Err(format!(
+                    "'{}' does not take '{key}'",
+                    owner(kind, &annotation)
+                ));
             }
-            None if kind.flags().contains(&word.as_str()) => {
+            None if takes_flag(&word) => {
                 annotation.flags.insert(word);
             }
-            None => return Err(format!("'{}' does not take '{word}'", kind.name())),
+            None => {
+                return Err(format!(
+                    "'{}' does not take '{word}'",
+                    owner(kind, &annotation)
+                ));
+            }
         }
     }
     if matches!(kind, Kind::Figure | Kind::Replace)
@@ -224,30 +300,16 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
         return Err(format!("'{}' needs a name or a src", kind.name()));
     }
     if kind == Kind::Widget {
-        let Some(widget) = annotation.get("widget") else {
+        let Some(widget) = annotation.get("widget").map(str::to_string) else {
             return Err("'widget' needs a name".to_string());
         };
-        match (widget == "quiz", annotation.get("answer")) {
-            (true, None) => return Err("'quiz' needs an answer".to_string()),
-            (true, Some(answer)) if answer.parse::<usize>().is_ok_and(|n| n > 0) => {}
-            (true, Some(answer)) => {
-                return Err(format!("answer '{answer}' is not a position from 1"));
-            }
-            (false, Some(_)) => return Err(format!("'{widget}' does not take 'answer'")),
-            (false, None) => {}
+        if widget == "quiz" && annotation.get("answer").is_none() {
+            return Err("'quiz' needs an answer".to_string());
         }
-        // The options of a carousel.
-        if widget != "carousel" {
-            for key in ["show", "autoplay"] {
-                if annotation.get(key).is_some() {
-                    return Err(format!("'{widget}' does not take '{key}'"));
-                }
-            }
-            for flag in ["loop", "zoom"] {
-                if annotation.has(flag) {
-                    return Err(format!("'{widget}' does not take '{flag}'"));
-                }
-            }
+        if let Some(answer) = annotation.get("answer")
+            && !answer.parse::<usize>().is_ok_and(|n| n > 0)
+        {
+            return Err(format!("answer '{answer}' is not a position from 1"));
         }
         if let Some(show) = annotation.get("show") {
             let counts: Vec<&str> = show.split_whitespace().collect();
@@ -269,12 +331,43 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
                 "autoplay is a delay in milliseconds, {MIN_AUTOPLAY} or more"
             ));
         }
-        if annotation.get("id").is_some_and(|id| {
-            id.is_empty()
-                || !id
-                    .chars()
-                    .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-        }) {
+        if let Some(group) = annotation.get("group")
+            && !is_name(group)
+        {
+            return Err("a group is letters, digits, hyphens and underscores".to_string());
+        }
+        if let Some(kind) = annotation.get("type")
+            && !CHART_TYPES.contains(&kind)
+        {
+            return Err(format!(
+                "a chart is one of {}, not '{kind}'",
+                CHART_TYPES.join(", ")
+            ));
+        }
+        if let Some(pins) = annotation.get("pins") {
+            let valid = !pins.split_whitespace().next().is_none()
+                && pins.split_whitespace().count() <= MAX_PINS
+                && pins.split_whitespace().all(|pin| {
+                    pin.split_once(',').is_some_and(|(x, y)| {
+                        [x, y]
+                            .iter()
+                            .all(|n| n.parse::<f64>().is_ok_and(|v| (0.0..=100.0).contains(&v)))
+                    })
+                });
+            if !valid {
+                return Err(format!(
+                    "pins are up to {MAX_PINS} positions as x,y in percent of the picture, from 0 to 100"
+                ));
+            }
+        }
+        if let Some(speed) = annotation.get("speed")
+            && !speed
+                .parse::<f64>()
+                .is_ok_and(|s| (MIN_SPEED..=MAX_SPEED).contains(&s))
+        {
+            return Err(format!("speed is a number from {MIN_SPEED} to {MAX_SPEED}"));
+        }
+        if annotation.get("id").is_some_and(|id| !is_name(id)) {
             return Err("an id is letters, digits, hyphens and underscores".to_string());
         }
     }

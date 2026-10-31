@@ -12,13 +12,18 @@ the blocks of the widget
 The blocks go through the same rendering as the rest of the page, so headings keep their anchors and
 links keep their targets. Without JavaScript the blocks stay in place and the page reads the same.
 
-| Widget      | Blocks it holds                          | Keys                                     |
-| ----------- | ---------------------------------------- | ---------------------------------------- |
-| `tabs`      | a heading for each tab, and what follows | `id`                                     |
-| `checklist` | a list of tasks                          | `id`                                     |
-| `steps`     | an ordered list                          | `id`                                     |
-| `quiz`      | a question, a list of choices, an answer | `id`, `answer`                           |
-| `carousel`  | slides, separated by thematic breaks     | `id`, `show`, `autoplay`, `loop`, `zoom` |
+| Widget       | Blocks it holds                          | Keys                                     |
+| ------------ | ---------------------------------------- | ---------------------------------------- |
+| `tabs`       | a heading for each tab, and what follows | `id`                                     |
+| `checklist`  | a list of tasks                          | `id`                                     |
+| `steps`      | an ordered list                          | `id`                                     |
+| `quiz`       | a question, a list of choices, an answer | `id`, `answer`                           |
+| `carousel`   | slides, separated by thematic breaks     | `id`, `show`, `autoplay`, `loop`, `zoom` |
+| `table`      | a table                                  | `id`                                     |
+| `compare`    | 2 pictures                               | `id`                                     |
+| `diff`       | a code block of the language `diff`      | `id`                                     |
+| `chart`      | a table of numbers                       | `id`, `type`                             |
+| `flashcards` | a table of 2 columns, front and back     | `id`                                     |
 
 `id` names the widget for what the reader did, such as the box ticked or the tab chosen. It is
 letters, digits, hyphens and underscores. A widget with no `id` is named by its place on the page,
@@ -26,7 +31,8 @@ so give one to any widget whose state matters when the page changes. The state s
 of the reader, under the address of the page.
 
 A widget cannot hold another one, and a `widget` or a `replace` cannot start inside one. `dkt lint`
-reports an unknown widget or key, a nested one, and a widget that no `end` closes.
+reports an unknown widget or key, a nested one, and a widget that no `end` closes. The tabs of a
+widget may repeat the names of other tabs, so the rule on repeated headings leaves them alone.
 
 ## Tabs
 
@@ -170,6 +176,148 @@ near them.
 <!-- site: figure name=favicon alt="The second picture" caption="Two" -->
 <!-- site: end -->
 ```
+
+## Tab groups
+
+Tabs with the same `group` follow each other: the reader who picks a system in one of them gets the
+same one in all the others, on this page and on the next ones, and it is remembered.
+
+<!-- site: widget tabs group=system id=build-linux -->
+
+### Linux
+
+```
+cargo build --release
+```
+
+### macOS
+
+```
+cargo build --release
+```
+
+### Windows
+
+```
+cargo build --release
+```
+
+<!-- site: end -->
+
+<!-- site: widget tabs group=system id=run-linux -->
+
+### Linux
+
+```
+./target/release/dkt --version
+```
+
+### macOS
+
+```
+./target/release/dkt --version
+```
+
+### Windows
+
+```
+.\target\release\dkt.exe --version
+```
+
+<!-- site: end -->
+
+## Table
+
+A table that can be filtered with a few words and sorted by a click on a heading. The filter is kept
+in the address, so a link can point to a filtered table.
+
+<!-- site: widget table id=providers -->
+
+| Provider  | Kind     | Local |
+| --------- | -------- | ----- |
+| loken     | native   | yes   |
+| ollama    | OpenAI   | yes   |
+| vLLM      | OpenAI   | yes   |
+| llama.cpp | OpenAI   | yes   |
+| Anthropic | Messages | no    |
+| OpenAI    | OpenAI   | no    |
+
+<!-- site: end -->
+
+## Compare
+
+2 pictures with a slider between them. The text of the figure, or else the alternative text, names
+each side.
+
+<!-- site: widget compare id=restyle -->
+
+![Before](img/before.svg)
+
+![After](img/after.svg)
+
+<!-- site: end -->
+
+## Diff
+
+A block of the language `diff`, with the added and removed lines coloured, that can also be read
+with the 2 sides next to each other.
+
+<!-- site: widget diff id=patch -->
+
+```diff
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1,6 +1,7 @@
+ fn main() {
+-    println!("hello");
+-    run();
++    let name = std::env::args().nth(1).unwrap_or_default();
++    println!("hello {name}");
++    run(&name);
+ }
+```
+
+<!-- site: end -->
+
+## Chart
+
+A table drawn as bars, or as lines with `type=line`, with a button to go back to the table. The
+first column names the points and the other columns are the series.
+
+<!-- site: widget chart id=speed -->
+
+| Pages | Before | After |
+| ----- | ------ | ----- |
+| 10    | 0.8    | 0.1   |
+| 50    | 3.9    | 0.4   |
+| 100   | 7.9    | 0.8   |
+
+<!-- site: end -->
+
+<!-- site: widget chart type=line id=speed-line -->
+
+| Pages | Before | After |
+| ----- | ------ | ----- |
+| 10    | 0.8    | 0.1   |
+| 50    | 3.9    | 0.4   |
+| 100   | 7.9    | 0.8   |
+
+<!-- site: end -->
+
+## Flashcards
+
+A table of 2 columns, the front and the back. A click turns the card, and the cards that the reader
+does not know come back. What is known is remembered.
+
+<!-- site: widget flashcards id=terms -->
+
+| Term       | Meaning                                                      |
+| ---------- | ------------------------------------------------------------ |
+| Widget     | blocks between 2 comments that the site makes a component of |
+| Annotation | a comment that starts with `site:`                           |
+| Theme      | templates and files that sites share                         |
+
+<!-- site: end -->
 
 ## Copy button
 

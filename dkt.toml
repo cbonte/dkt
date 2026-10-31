@@ -73,3 +73,7 @@ favicon = "/brand/favicon.svg"
 [[asset]]
 src = "brand"
 url = "/brand"
+
+[[asset]]
+src = "examples/img"
+url = "/img"

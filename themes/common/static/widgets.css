@@ -74,3 +74,52 @@ pre.dkt-copyable:hover .dkt-copy, .dkt-copy:focus-visible, .dkt-copy[data-done] 
 .dkt-lightbox { max-width: min(96vw, 1400px); padding: 0; border: 0; border-radius: 10px; background: transparent; }
 .dkt-lightbox::backdrop { background: rgb(0 0 0 / .75); }
 .dkt-lightbox img { display: block; max-width: 100%; max-height: 92vh; margin: auto; border-radius: 10px; }
+
+/* Table: a filter and headings that sort */
+.dkt-tablebar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.dkt-tablebar input { flex: 0 1 260px; padding: 5px 10px; font: inherit; color: var(--fg, inherit); background: var(--bg, transparent); border: 1px solid var(--line, #e3e6eb); border-radius: 6px; }
+.dkt-count { color: var(--muted, #5b6370); font-size: 13px; }
+.dkt-sort { padding: 0; font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; }
+.dkt-sort::after { content: " \2195"; opacity: .35; }
+th[aria-sort="ascending"] .dkt-sort::after { content: " \2191"; opacity: 1; }
+th[aria-sort="descending"] .dkt-sort::after { content: " \2193"; opacity: 1; }
+tr[hidden] { display: none; }
+
+/* Compare: 2 pictures and a slider */
+.dkt-stage { --dkt-at: 50%; position: relative; overflow: hidden; border-radius: 10px; line-height: 0; user-select: none; }
+.dkt-stage img { display: block; width: 100%; height: auto; }
+.dkt-over { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--dkt-at)) 0 0); }
+.dkt-stage input[type="range"] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.dkt-handle { position: absolute; top: 0; bottom: 0; left: var(--dkt-at); width: 3px; margin-left: -1.5px; background: var(--accent, #c2410c); pointer-events: none; }
+.dkt-handle::after { content: "\2194"; position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 30px; height: 30px; margin: -15px 0 0 -15px; color: #fff; background: var(--accent, #c2410c); border-radius: 50%; font: 16px/1 sans-serif; }
+.dkt-stage input:focus-visible + .dkt-handle { outline: 2px solid var(--fg, #000); outline-offset: 2px; }
+.dkt-tag { position: absolute; top: 8px; padding: 2px 8px; color: #fff; background: rgb(0 0 0 / .6); border-radius: 6px; font: 12px/1.5 sans-serif; pointer-events: none; }
+.dkt-tag-left { left: 8px; }
+.dkt-tag-right { right: 8px; }
+
+/* Diff */
+.dkt-switch { display: flex; gap: 6px; margin-bottom: 8px; }
+.dkt-switch .dkt-button[aria-pressed="true"] { color: var(--accent, #c2410c); border-color: var(--accent, #c2410c); }
+.dkt-diff { overflow-x: auto; border: 1px solid var(--line, #e3e6eb); border-radius: 8px; font: 13px/1.5 var(--mono, ui-monospace, monospace); }
+.dkt-diff[hidden] { display: none; }
+.dkt-line { padding: 0 10px; white-space: pre; }
+.dkt-line.add { background: color-mix(in srgb, #15803d 16%, transparent); }
+.dkt-line.del { background: color-mix(in srgb, #b91c1c 16%, transparent); }
+.dkt-line.hunk, .dkt-line.meta { color: var(--muted, #5b6370); background: var(--surface, #f6f7f9); }
+.dkt-line.gap { background: var(--surface, #f6f7f9); }
+.dkt-pair { display: grid; grid-template-columns: 1fr 1fr; }
+.dkt-pair > .dkt-line:first-child { border-right: 1px solid var(--line, #e3e6eb); }
+.dkt-line.dkt-wide { grid-column: 1 / -1; }
+
+/* Chart */
+.dkt-chart svg { display: block; width: 100%; max-width: 640px; height: auto; }
+.dkt-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0 0; font-size: 13px; }
+.dkt-key { display: inline-flex; align-items: center; gap: 6px; }
+.dkt-key i { width: 12px; height: 12px; border-radius: 3px; }
+
+/* Flashcards */
+.dkt-card { display: grid; place-items: center; min-height: 140px; padding: 18px 22px; text-align: center; font-size: 1.15em; background: var(--surface, #f6f7f9); border: 1px solid var(--line, #e3e6eb); border-radius: 12px; cursor: pointer; }
+.dkt-card[data-side="back"] { border-color: var(--accent, #c2410c); background: var(--accent-bg, #fff1e8); }
+.dkt-card:focus-visible { outline: 2px solid var(--accent, #c2410c); outline-offset: 2px; }
+.dkt-actions { display: flex; gap: 8px; margin-top: 10px; }
+.dkt-actions [hidden] { display: none; }
