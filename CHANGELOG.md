@@ -1,43 +1,45 @@
-# Unreleased
+# 0.2.0 - 2026-10-31
 
 ## Added
 
-- rst: read tables, definition lists, line blocks, footnotes and substitutions.
-- rst: read the files that an include directive names, and the entries of a toctree.
-- rst: read list and csv tables, version notes, topics, rubrics, math, option lists and doctests.
-- rst: read named and anonymous references, and the common inline roles.
-- site: show examples of formats, themes, widgets and terminal output in a section.
-- widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
-- widget: show what the reader has done in the whole site, from a file that the build writes.
-- site: end the pages of a section with links to the previous and to the next page.
-- site: show a card with the title and description of a page when the pointer rests on a link to it.
-- html: draw the ansi blocks with the colours of the terminal.
-- html: draw Mermaid blocks as SVG figures, and pie charts as pies.
-- widget: document every widget, with its blocks, its options, what it remembers and what it does without the script.
-- widget: group tabs, so that a choice made in one tab set is made in the others.
-- widget: filter and sort a table, compare 2 pictures with a slider and read a diff in 2 sides.
+- widget: wrap blocks in a widget annotation to make tabs, a checklist, steps or a quiz.
+- widget: scroll a carousel like a gallery, with several slides in view, a loop and auto-play.
+- widget: enlarge the pictures of a carousel, and load the ones out of view when needed.
+- widget: group tabs, so that a choice made in one set is made in the others.
+- widget: filter and sort a table, with the filter in the address.
+- widget: compare 2 pictures with a slider, and read a diff on 1 side or on 2.
 - widget: draw a table as bars or lines, and turn a table into flashcards.
-- lint: let the tabs of a widget repeat their names.
 - widget: put numbered pins on a picture, tied to the items of a list.
 - widget: write a command from a form, and play a terminal session back.
 - widget: show only the versions of a changelog that come after the reader's.
-- widget: show several slides of a carousel, loop it, scroll it by itself and enlarge its pictures.
-- theme: add a copy button to the code blocks.
-- theme: close the gaps between the lines of a code block that draws boxes.
-- theme: style the alerts and the footnotes of a document, with a colour for each kind of alert.
+- widget: show what the reader has done in the whole site, page by page.
+- widget: document every widget, its options, what it remembers and its fallback.
 - lint: report a widget that is unknown, nested or never closed.
-
-## Fixed
-
-- rst: read the address of a target, which was cut at its last colon.
-- fmt: keep the marker of an alert alone on its line.
-- rst: read a directive with a space before its colons, as in note ::.
+- lint: let the tabs of a widget repeat their names.
+- html: draw Mermaid blocks as SVG figures, and pie charts as pies.
+- html: draw ansi blocks with the colours of a terminal.
+- site: show examples of formats, themes, widgets and terminal output.
+- site: show a card with the title and the description of a page on a link to it.
+- site: end the pages of a section with links to the previous and to the next page.
+- theme: add a copy button to the code blocks.
+- theme: style the alerts and the footnotes of a document.
+- theme: close the gaps between the lines of a drawing made of box characters.
+- rst: read tables, definition lists, line blocks, footnotes and substitutions.
+- rst: read included files, the entries of a toctree, list tables and csv tables.
+- rst: read version notes, topics, rubrics, math, option lists and doctests.
+- rst: read named and anonymous references, and the common inline roles.
 
 ## Changed
 
+- site: convert each document once and build the pages on several threads.
 - lint: read the anchors of a file as a stream, with a fraction of the memory.
 - ci: run the checks on a pull request, a tag or a manual start, not on every push.
-- site: convert each document once and build the pages on several threads.
+
+## Fixed
+
+- fmt: keep the marker of an alert alone on its line.
+- rst: read the address of a target, which was cut at its last colon.
+- rst: read a directive with a space before its colons.
 
 # 0.1.0 - 2026-10-31
 
