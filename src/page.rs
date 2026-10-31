@@ -372,6 +372,34 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                 ))));
                 i = end + 1;
             }
+            // A Mermaid diagram is drawn as an SVG figure, as GitHub draws it. One that is not
+            // drawn stays a code block.
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info)))
+                if info.split_whitespace().next() == Some("mermaid") =>
+            {
+                let end = find_end(&events, i + 1, |e| {
+                    matches!(e, Event::End(TagEnd::CodeBlock))
+                });
+                let text: String = events[i + 1..end]
+                    .iter()
+                    .filter_map(|e| match e {
+                        Event::Text(t) => Some(t.as_ref()),
+                        _ => None,
+                    })
+                    .collect();
+                match crate::mermaid::svg(&text) {
+                    Some(svg) => {
+                        body.push(Event::Html(CowStr::from(format!(
+                            "<figure class=\"diagram\">{svg}</figure>\n"
+                        ))));
+                        i = end + 1;
+                    }
+                    None => {
+                        body.push(events[i].clone());
+                        i += 1;
+                    }
+                }
+            }
             // A table that is wider than the page scrolls inside its own box.
             Event::Start(Tag::Table(_)) => {
                 body.push(Event::Html(CowStr::from("<div class=\"table-wrap\">")));

@@ -2,10 +2,10 @@
 
 use std::collections::HashMap;
 
+use super::Drawing;
 use super::canvas::{Canvas, Dir, E, N, S, W, Weight};
 use super::graph::{Direction, Flow, Head, Node, Shape};
 use super::route::{Blocked, route};
-use crate::model::Line;
 use crate::options::RenderOptions;
 use crate::wrap::{display_width, segments_width};
 
@@ -425,7 +425,7 @@ fn head_glyph(head: Head, heading: Dir, opts: &RenderOptions) -> Option<char> {
 }
 
 /// Draws the flowchart within `width` columns. `None` when it does not fit or cannot be routed.
-pub fn draw(flow: &Flow, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
+pub fn draw(flow: &Flow, width: usize, opts: &RenderOptions) -> Option<Drawing> {
     if flow.nodes.is_empty() {
         return None;
     }
@@ -514,11 +514,11 @@ pub fn draw(flow: &Flow, width: usize, opts: &RenderOptions) -> Option<Vec<Line>
             return None;
         }
     }
-    let lines = canvas.into_lines(&opts.glyphs, opts.theme.table_border, opts.theme.base);
+    let lines = canvas.render_lines(&opts.glyphs, opts.theme.table_border, opts.theme.base);
     if lines.iter().any(|l| segments_width(l) > width) {
         return None;
     }
-    Some(lines)
+    Some(Drawing { lines, canvas })
 }
 
 #[cfg(test)]
@@ -528,7 +528,7 @@ mod tests {
 
     fn draw_plain(src: &str, width: usize) -> Option<String> {
         let flow = parse(src)?;
-        let lines = draw(&flow, width, &RenderOptions::plain(width))?;
+        let lines = draw(&flow, width, &RenderOptions::plain(width))?.lines;
         Some(
             lines
                 .iter()

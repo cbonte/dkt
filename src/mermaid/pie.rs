@@ -103,6 +103,82 @@ fn draw(pie: &Pie, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
     Some(out)
 }
 
+/// The colours of the slices, which read on a light and on a dark page.
+const SLICES: [&str; 8] = [
+    "#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#b07aa1", "#76b7b2", "#edc948", "#9c755f",
+];
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+/// A `pie` block as an SVG element: the pie, and a legend with the share of each slice.
+pub fn svg(code: &str) -> Option<String> {
+    let pie = parse(code)?;
+    let total: f64 = pie.slices.iter().map(|s| s.1).sum();
+    let (radius, cx, cy) = (90.0_f64, 100.0_f64, 100.0_f64);
+    let title_height = if pie.title.is_some() { 28.0 } else { 0.0 };
+    let mut shapes = String::new();
+    let mut angle = -std::f64::consts::FRAC_PI_2;
+    let point = |a: f64| (cx + radius * a.cos(), cy + title_height + radius * a.sin());
+    for (i, (_, value)) in pie.slices.iter().enumerate() {
+        let sweep = value / total * std::f64::consts::TAU;
+        let color = SLICES[i % SLICES.len()];
+        if pie.slices.len() == 1 {
+            shapes.push_str(&format!(
+                "<circle cx=\"{cx}\" cy=\"{}\" r=\"{radius}\" fill=\"{color}\"/>",
+                cy + title_height
+            ));
+        } else if *value > 0.0 {
+            let (x1, y1) = point(angle);
+            let (x2, y2) = point(angle + sweep);
+            let large = u8::from(sweep > std::f64::consts::PI);
+            shapes.push_str(&format!(
+                "<path d=\"M{cx} {}L{x1:.2} {y1:.2}A{radius} {radius} 0 {large} 1 {x2:.2} {y2:.2}Z\" fill=\"{color}\" stroke=\"var(--bg, #fff)\" stroke-width=\"1.5\"/>",
+                cy + title_height
+            ));
+        }
+        angle += sweep;
+    }
+    let mut legend = String::new();
+    for (i, (label, value)) in pie.slices.iter().enumerate() {
+        let y = title_height + 24.0 + i as f64 * 22.0;
+        let share = format!("{:.1}%", value / total * 100.0);
+        let figure = if pie.show_data {
+            format!("{share} ({value})")
+        } else {
+            share
+        };
+        legend.push_str(&format!(
+            "<rect x=\"220\" y=\"{:.1}\" width=\"12\" height=\"12\" rx=\"2\" fill=\"{}\"/><text x=\"240\" y=\"{:.1}\">{} <tspan opacity=\".7\">{}</tspan></text>",
+            y - 10.0,
+            SLICES[i % SLICES.len()],
+            y,
+            escape(label),
+            escape(&figure)
+        ));
+    }
+    let height = (title_height + 2.0 * radius + 20.0)
+        .max(title_height + 30.0 + pie.slices.len() as f64 * 22.0);
+    let title = pie
+        .title
+        .as_ref()
+        .map(|t| {
+            format!(
+                "<text x=\"{cx}\" y=\"18\" text-anchor=\"middle\" font-weight=\"600\">{}</text>",
+                escape(t)
+            )
+        })
+        .unwrap_or_default();
+    Some(format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 520 {height}\" width=\"520\" height=\"{height}\" role=\"img\" aria-label=\"Pie chart\" font-family=\"system-ui, sans-serif\" font-size=\"13\" fill=\"currentColor\"><title>Pie chart</title><desc>{}</desc>{title}{shapes}{legend}</svg>",
+        escape(code.trim_end())
+    ))
+}
+
 /// Draws a `pie` block within `width` columns.
 pub fn render(code: &str, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
     draw(&parse(code)?, width, opts)

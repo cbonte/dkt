@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
+use super::Drawing;
 use super::canvas::{Canvas, Dir, E, N, S, W, Weight};
-use crate::model::Line;
 use crate::options::RenderOptions;
 use crate::wrap::{display_width, segments_width};
 
@@ -231,7 +231,7 @@ fn note_box(place: &Place, lines: &[String], c: &[i64]) -> (i64, usize) {
     }
 }
 
-fn draw(seq: &Sequence, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
+fn draw(seq: &Sequence, width: usize, opts: &RenderOptions) -> Option<Drawing> {
     let n = seq.names.len();
     let boxes: Vec<usize> = seq
         .names
@@ -351,15 +351,15 @@ fn draw(seq: &Sequence, width: usize, opts: &RenderOptions) -> Option<Vec<Line>>
             }
         }
     }
-    let lines = canvas.into_lines(&opts.glyphs, opts.theme.table_border, opts.theme.base);
+    let lines = canvas.render_lines(&opts.glyphs, opts.theme.table_border, opts.theme.base);
     if lines.iter().any(|l| segments_width(l) > width) {
         return None;
     }
-    Some(lines)
+    Some(Drawing { lines, canvas })
 }
 
 /// Draws a `sequenceDiagram` block within `width` columns.
-pub fn render(code: &str, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
+pub fn render(code: &str, width: usize, opts: &RenderOptions) -> Option<Drawing> {
     draw(&parse(code)?, width, opts)
 }
 
@@ -368,7 +368,7 @@ mod tests {
     use super::*;
 
     fn draw_plain(src: &str, width: usize) -> Option<String> {
-        let lines = render(src, width, &RenderOptions::plain(width))?;
+        let lines = render(src, width, &RenderOptions::plain(width))?.lines;
         Some(
             lines
                 .iter()

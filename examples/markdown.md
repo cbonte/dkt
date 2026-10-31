@@ -92,6 +92,35 @@ cmd arg
   a _/
 ```
 
+## Mermaid
+
+A `mermaid` block is drawn as an SVG figure, as GitHub draws it, with no script on the page.
+Flowcharts, sequence diagrams, state diagrams, class diagrams, entity-relationship diagrams and pie
+charts are drawn. A block of another kind stays a code block.
+
+~~~
+```mermaid
+flowchart LR
+    A[Write] --> B{Pass?}
+    B -->|yes| C([Publish])
+    B -.->|no| A
+```
+~~~
+
+```mermaid
+flowchart LR
+    A[Write] --> B{Pass?}
+    B -->|yes| C([Publish])
+    B -.->|no| A
+```
+
+```mermaid
+pie title Where the time goes
+    "Writing" : 55
+    "Checking" : 30
+    "Publishing" : 15
+```
+
 ## Links
 
 A relative link to another document becomes a link to its page, with its anchor, so the documents

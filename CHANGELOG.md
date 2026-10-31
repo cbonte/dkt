@@ -8,6 +8,7 @@
 - rst: read named and anonymous references, and the common inline roles.
 - site: show examples of formats, themes, widgets and terminal output in a section.
 - widget: wrap blocks in a widget annotation: tabs, checklist, steps, quiz or carousel.
+- html: draw Mermaid blocks as SVG figures, and pie charts as pies.
 - widget: show several slides of a carousel, loop it, scroll it by itself and enlarge its pictures.
 - theme: add a copy button to the code blocks.
 - theme: close the gaps between the lines of a code block that draws boxes.

@@ -185,7 +185,7 @@ impl Canvas {
     }
 
     /// One line per row, without blank rows at the ends nor blank columns on the left.
-    pub fn into_lines(self, glyphs: &Glyphs, line: Style, text: Style) -> Vec<Line> {
+    pub fn render_lines(&self, glyphs: &Glyphs, line: Style, text: Style) -> Vec<Line> {
         let rows: Vec<&[Cell]> = self.cells.chunks(self.w.max(1)).collect();
         let used = |row: &&[Cell]| row.iter().any(|c| *c != Cell::Empty);
         let Some(first) = rows.iter().position(used) else {
@@ -255,13 +255,224 @@ fn joined_glyph(mask: u8, b: &Borders) -> char {
     }
 }
 
+/// Width and height of a cell in the drawing of a diagram, in the units of its `viewBox`.
+const CELL_W: f64 = 7.8;
+const CELL_H: f64 = 16.0;
+/// Where the base line of a row of text lies in its cell.
+const BASELINE: f64 = 11.5;
+
+fn number(x: f64) -> String {
+    let s = format!("{x:.1}");
+    s.strip_suffix(".0").map_or(s.clone(), str::to_string)
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+/// The path of a triangle with its tip toward `heading`, in the cell at `(x, y)`.
+fn triangle(heading: char, x: f64, y: f64) -> String {
+    let (cx, cy) = (x + CELL_W / 2.0, y + CELL_H / 2.0);
+    let (a, b) = (3.6, 4.4);
+    let points = match heading {
+        '^' => [(cx, cy - b), (cx - a, cy + b), (cx + a, cy + b)],
+        '>' => [(cx + a, cy), (cx - a, cy - b), (cx - a, cy + b)],
+        'v' => [(cx, cy + b), (cx - a, cy - b), (cx + a, cy - b)],
+        _ => [(cx - a, cy), (cx + a, cy - b), (cx + a, cy + b)],
+    };
+    format!(
+        "M{} {}L{} {}L{} {}Z",
+        number(points[0].0),
+        number(points[0].1),
+        number(points[1].0),
+        number(points[1].1),
+        number(points[2].0),
+        number(points[2].1)
+    )
+}
+
+impl Canvas {
+    /// The drawing as an SVG element, which holds `source` for those who cannot see it.
+    /// Lines are drawn with the colour of the text, so that the drawing follows the theme.
+    pub fn to_svg(&self, source: &str) -> String {
+        let used = |c: &Cell| *c != Cell::Empty;
+        let rows: Vec<&[Cell]> = self.cells.chunks(self.w.max(1)).collect();
+        let Some(first) = rows.iter().position(|r| r.iter().any(used)) else {
+            return String::new();
+        };
+        let last = rows
+            .iter()
+            .rposition(|r| r.iter().any(used))
+            .unwrap_or(first);
+        let left = rows[first..=last]
+            .iter()
+            .filter_map(|r| r.iter().position(used))
+            .min()
+            .unwrap_or(0);
+        let end = rows[first..=last]
+            .iter()
+            .filter_map(|r| r.iter().rposition(used))
+            .max()
+            .map_or(left, |e| e + 1);
+        let (w, h) = (
+            (end - left) as f64 * CELL_W,
+            (last - first + 1) as f64 * CELL_H,
+        );
+        let (mut normal, mut thick, mut dotted) = (String::new(), String::new(), String::new());
+        let mut shapes = String::new();
+        let mut words = String::new();
+        let seg = |d: &mut String, x1: f64, y1: f64, x2: f64, y2: f64| {
+            d.push_str(&format!(
+                "M{} {}L{} {}",
+                number(x1),
+                number(y1),
+                number(x2),
+                number(y2)
+            ));
+        };
+        for (r, row) in rows[first..=last].iter().enumerate() {
+            let y = r as f64 * CELL_H;
+            let cy = y + CELL_H / 2.0;
+            let mut run: Vec<(usize, char)> = Vec::new();
+            let flush = |run: &mut Vec<(usize, char)>, words: &mut String| {
+                if run.is_empty() {
+                    return;
+                }
+                let xs: Vec<String> = run
+                    .iter()
+                    .map(|(c, _)| number(*c as f64 * CELL_W))
+                    .collect();
+                let text: String = run.iter().map(|(_, ch)| *ch).collect();
+                words.push_str(&format!(
+                    "<text y=\"{}\"><tspan x=\"{}\">{}</tspan></text>",
+                    number(y + BASELINE),
+                    xs.join(" "),
+                    escape(&text)
+                ));
+                run.clear();
+            };
+            for (c, cell) in row[left.min(row.len())..end.min(row.len())]
+                .iter()
+                .enumerate()
+            {
+                let x = c as f64 * CELL_W;
+                let cx = x + CELL_W / 2.0;
+                if let Cell::Text(ch) = cell {
+                    run.push((c, *ch));
+                    continue;
+                }
+                if matches!(cell, Cell::Cont) {
+                    continue;
+                }
+                flush(&mut run, &mut words);
+                match *cell {
+                    Cell::Lines(mask, weight) => {
+                        let d = match weight {
+                            Weight::Normal => &mut normal,
+                            Weight::Thick => &mut thick,
+                            Weight::Dotted => &mut dotted,
+                        };
+                        let (n, e, s, wst) =
+                            (mask & N != 0, mask & E != 0, mask & S != 0, mask & W != 0);
+                        if n && s {
+                            seg(d, cx, y, cx, y + CELL_H);
+                        } else if n {
+                            seg(d, cx, y, cx, cy);
+                        } else if s {
+                            seg(d, cx, cy, cx, y + CELL_H);
+                        }
+                        if e && wst {
+                            seg(d, x, cy, x + CELL_W, cy);
+                        } else if e {
+                            seg(d, cx, cy, x + CELL_W, cy);
+                        } else if wst {
+                            seg(d, x, cy, cx, cy);
+                        }
+                    }
+                    Cell::Glyph(ch) => {
+                        let r = CELL_W / 2.0;
+                        match ch {
+                            '\u{25b2}' => shapes.push_str(&format!("<path d=\"{}\" fill=\"currentColor\"/>", triangle('^', x, y))),
+                            '\u{25ba}' => shapes.push_str(&format!("<path d=\"{}\" fill=\"currentColor\"/>", triangle('>', x, y))),
+                            '\u{25bc}' => shapes.push_str(&format!("<path d=\"{}\" fill=\"currentColor\"/>", triangle('v', x, y))),
+                            '\u{25c4}' => shapes.push_str(&format!("<path d=\"{}\" fill=\"currentColor\"/>", triangle('<', x, y))),
+                            '\u{25b3}' => seg_path(&mut shapes, &triangle('^', x, y)),
+                            '\u{25b7}' => seg_path(&mut shapes, &triangle('>', x, y)),
+                            '\u{25bd}' => seg_path(&mut shapes, &triangle('v', x, y)),
+                            '\u{25c1}' => seg_path(&mut shapes, &triangle('<', x, y)),
+                            '\u{25c6}' | '\u{25c7}' => {
+                                let d = format!(
+                                    "M{} {}L{} {}L{} {}L{} {}Z",
+                                    number(cx),
+                                    number(cy - 4.6),
+                                    number(cx + r),
+                                    number(cy),
+                                    number(cx),
+                                    number(cy + 4.6),
+                                    number(cx - r),
+                                    number(cy)
+                                );
+                                if ch == '\u{25c6}' {
+                                    shapes.push_str(&format!("<path d=\"{d}\" fill=\"currentColor\"/>"));
+                                } else {
+                                    seg_path(&mut shapes, &d);
+                                }
+                            }
+                            '\u{256d}' => normal.push_str(&format!("M{} {}L{} {}Q{} {} {} {}L{} {}", number(cx), number(y + CELL_H), number(cx), number(cy + r), number(cx), number(cy), number(cx + r), number(cy), number(x + CELL_W), number(cy))),
+                            '\u{256e}' => normal.push_str(&format!("M{} {}L{} {}Q{} {} {} {}L{} {}", number(cx), number(y + CELL_H), number(cx), number(cy + r), number(cx), number(cy), number(cx - r), number(cy), number(x), number(cy))),
+                            '\u{2570}' => normal.push_str(&format!("M{} {}L{} {}Q{} {} {} {}L{} {}", number(cx), number(y), number(cx), number(cy - r), number(cx), number(cy), number(cx + r), number(cy), number(x + CELL_W), number(cy))),
+                            '\u{256f}' => normal.push_str(&format!("M{} {}L{} {}Q{} {} {} {}L{} {}", number(cx), number(y), number(cx), number(cy - r), number(cx), number(cy), number(cx - r), number(cy), number(x), number(cy))),
+                            '\u{2571}' => seg(&mut normal, x + CELL_W, y, x, y + CELL_H),
+                            '\u{2572}' => seg(&mut normal, x, y, x + CELL_W, y + CELL_H),
+                            '\u{25cf}' => shapes.push_str(&format!("<circle cx=\"{}\" cy=\"{}\" r=\"4\" fill=\"currentColor\"/>", number(cx), number(cy))),
+                            '\u{25c9}' => shapes.push_str(&format!("<circle cx=\"{}\" cy=\"{}\" r=\"4.4\" fill=\"none\" stroke=\"currentColor\"/><circle cx=\"{}\" cy=\"{}\" r=\"2\" fill=\"currentColor\"/>", number(cx), number(cy), number(cx), number(cy))),
+                            other => run.push((c, other)),
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            flush(&mut run, &mut words);
+        }
+        let stroke = |d: &str, width: &str, dash: &str| {
+            if d.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    "<path d=\"{d}\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"{width}\"{dash} stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+                )
+            }
+        };
+        format!(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {w} {h}\" width=\"{w}\" height=\"{h}\" role=\"img\" aria-label=\"Diagram\" font-family=\"ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace\" font-size=\"13\"><title>Diagram</title><desc>{}</desc>{}{}{}{}<g fill=\"currentColor\" xml:space=\"preserve\">{words}</g></svg>",
+            escape(source.trim_end()),
+            stroke(&normal, "1.2", ""),
+            stroke(&thick, "2.4", ""),
+            stroke(&dotted, "1.2", " stroke-dasharray=\"2 3\""),
+            shapes,
+            w = number(w),
+            h = number(h),
+        )
+    }
+}
+
+/// An outline in the colour of the text, with nothing inside.
+fn seg_path(out: &mut String, d: &str) {
+    out.push_str(&format!(
+        "<path d=\"{d}\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/>"
+    ));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn plain(canvas: Canvas) -> Vec<String> {
         canvas
-            .into_lines(&Glyphs::ascii(), Style::PLAIN, Style::PLAIN)
+            .render_lines(&Glyphs::ascii(), Style::PLAIN, Style::PLAIN)
             .iter()
             .map(|l| l.iter().map(|s| s.text.as_str()).collect())
             .collect()

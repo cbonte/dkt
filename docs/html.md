@@ -85,18 +85,23 @@ that span. A backtick under a bar, or under the end of a span, followed by a das
 line that turns right toward a label, and a row of `<--->` is a double arrow for each span of the
 text above it. The strokes and the text take the colour of the text of the page.
 
+A fenced block whose language is `mermaid` is drawn as an SVG figure too, with the layout that
+`dkt cat` draws in the terminal. It holds a flowchart, a sequence diagram, a state diagram, a class
+diagram or an entity-relationship diagram. A pie chart is drawn as a pie with a legend. A block that
+is not drawn stays a code block.
+
 ## Annotations
 
 A document can carry notes for the site in HTML comments, which GitHub does not show. A comment is
 an annotation when it starts with `site:` and a kind. The kind sets what it applies to.
 
-| Kind               | Applies to                       | Keys and flags                                                              |
-| ------------------ | -------------------------------- | --------------------------------------------------------------------------- |
-| `page`             | the page, wherever it is written | `title`, `description`, `nav-title`, `weight`, flags `hide` and `no-search` |
-| `figure`           | the place where it is written    | `src` or `name`, `dark`, `alt`, `caption`                                   |
-| `replace` to `end` | the blocks between them          | the keys of `figure`, and the blocks give way to its figure                 |
-| `alias`            | the section it is written in     | `words`, the words that find the section in a search                        |
-| `widget` to `end`  | the blocks between them          | the name of a [widget](../examples/widgets.md), `id`, and `answer` for a quiz           |
+| Kind               | Applies to                       | Keys and flags                                                                |
+| ------------------ | -------------------------------- | ----------------------------------------------------------------------------- |
+| `page`             | the page, wherever it is written | `title`, `description`, `nav-title`, `weight`, flags `hide` and `no-search`   |
+| `figure`           | the place where it is written    | `src` or `name`, `dark`, `alt`, `caption`                                     |
+| `replace` to `end` | the blocks between them          | the keys of `figure`, and the blocks give way to its figure                   |
+| `alias`            | the section it is written in     | `words`, the words that find the section in a search                          |
+| `widget` to `end`  | the blocks between them          | the name of a [widget](../examples/widgets.md), `id`, and `answer` for a quiz |
 
 ```
 <!-- site: page title="The tour" nav-title="Tour" weight=2 -->

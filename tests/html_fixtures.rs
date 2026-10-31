@@ -198,3 +198,27 @@ fn a_carousel_is_cut_into_slides_with_its_options() {
     assert!(c.contains(r#"<img src="a.png""#), "{c}");
     assert!(c.contains(r#"<img loading="lazy" src="b.png""#), "{c}");
 }
+
+#[test]
+fn a_mermaid_block_is_drawn_as_an_svg_figure() {
+    let page = page::render(
+        "```mermaid\ngraph LR\n  A[Write] --> B[Check]\n```\n\n```mermaid\npie title Pets\n  \"Dogs\" : 3\n  \"Cats\" : 1\n```\n\n```mermaid\ngantt\n  title Not drawn\n```\n",
+        None,
+    );
+    let c = &page.content;
+    assert_eq!(
+        c.matches("<figure class=\"diagram\"><svg").count(),
+        2,
+        "{c}"
+    );
+    assert!(c.contains("Write") && c.contains("Check"), "{c}");
+    assert!(
+        c.contains("aria-label=\"Pie chart\"") && c.contains("Dogs") && c.contains("75.0%"),
+        "{c}"
+    );
+    // A diagram that is not drawn stays the code block that GitHub would draw.
+    assert!(
+        c.contains("<pre><code class=\"language-mermaid\">gantt"),
+        "{c}"
+    );
+}
