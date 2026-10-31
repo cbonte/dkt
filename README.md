@@ -11,6 +11,7 @@ Markdown, in reStructuredText or in another format is read as Markdown first.
 | [dkt lint](docs/lint.md)              | check links, anchors and heading structure               |
 | [dkt convert](docs/convert.md)        | convert a document to Markdown                           |
 | [dkt html](docs/html.md)              | render a document as HTML, in a template                 |
+| [dkt site](docs/site.md)              | build a static site from documents and a properties file |
 | [the rst format](docs/rst.md)         | read reStructuredText, as Sphinx documents are written   |
 | [the haproxy format](docs/haproxy.md) | read the documentation texts of HAProxy                  |
 

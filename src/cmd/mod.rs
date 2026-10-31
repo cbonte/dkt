@@ -5,4 +5,5 @@ pub mod convert;
 pub mod fmt;
 pub mod html;
 pub mod lint;
+pub mod site;
 pub mod toc;

@@ -4,7 +4,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
 use dkt::cli_extras::{self, is_broken_pipe};
-use dkt::cmd::{cat, convert, fmt, html, lint, toc};
+use dkt::cmd::{cat, convert, fmt, html, lint, site, toc};
 
 /// Document tools for the terminal.
 #[derive(Parser, Debug)]
@@ -36,6 +36,8 @@ enum Command {
     Lint(lint::Args),
     /// Convert a document to Markdown.
     Convert(convert::Args),
+    /// Build a static site from Markdown documents and a properties file.
+    Site(site::Args),
 }
 
 fn dispatch(command: Command) -> (&'static str, anyhow::Result<ExitCode>) {
@@ -46,6 +48,7 @@ fn dispatch(command: Command) -> (&'static str, anyhow::Result<ExitCode>) {
         Command::Toc(args) => ("toc", toc::run(&args)),
         Command::Lint(args) => ("lint", lint::run(&args)),
         Command::Convert(args) => ("convert", convert::run(&args)),
+        Command::Site(args) => ("site", site::run(&args)),
     }
 }
 

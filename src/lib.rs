@@ -17,6 +17,8 @@ pub mod page;
 pub mod pager;
 pub mod parse;
 pub mod rst;
+pub mod search;
+pub mod site;
 pub mod slug;
 pub mod source;
 pub mod style;

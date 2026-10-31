@@ -55,3 +55,21 @@
 - html: render Markdown as an HTML body or a page in a template, with GitHub anchors.
 - html: act on site annotations written as comments: a page title and weight, a figure, a replaced region.
 - html: draw a diagram block as an SVG figure.
+- site: name the format of a page, markdown, rst or haproxy.
+- site: show a document on the home page, and let a template add a stylesheet and change the footer.
+- site: give the colours of a site for the light and the dark appearance.
+- site: build a part of a site, the home page, a section or a page.
+- site: give the title of a page in the properties and tell its section in the search.
+- site: build a static site from Markdown documents, a properties file and templates.
+- site: share templates and files between sites through a theme that each site can override.
+- site: build with the docs, paper or plain theme that comes with the binary, docs by default.
+- site: write an index of the titles of the pages and of their sections, unless search is off.
+- site: search those titles from a palette in the docs, paper and plain themes.
+- site: find a section by words given in an alias annotation, and by one slip of the keys.
+- site: show the section above and the description of a page in the results.
+- site: open the palette on the pages opened from it lately.
+- site: leave a page out of the search with the flag no-search.
+- site: let a site add a block at the top of the menu of the docs theme.
+- site: let the menu and the list of headings of the docs theme scroll, and keep the current heading in view.
+- site: look at sections only or pages only with a hash or a greater-than sign.
+- site: highlight the section that a search result leads to.
