@@ -1,30 +1,42 @@
 # dkt
 
-Doc Kit (dk:t): document tools in one binary, sharing one parser and one model. A document in
-Markdown, in reStructuredText or in another format is read as Markdown first.
+Doc Kit (dk:t) is a set of tools for documents, in one binary.
 
-| Command                               | Purpose                                                  |
-| ------------------------------------- | -------------------------------------------------------- |
-| [dkt cat](docs/cat.md)                | render a document as styled text                         |
-| [dkt fmt](docs/fmt.md)                | rewrap prose and normalise block syntax                  |
-| [dkt toc](docs/toc.md)                | insert or refresh a table of contents                    |
-| [dkt lint](docs/lint.md)              | check links, anchors and heading structure               |
-| [dkt convert](docs/convert.md)        | convert a document to Markdown                           |
-| [dkt html](docs/html.md)              | render a document as HTML, in a template                 |
-| [dkt site](docs/site.md)              | build a static site from documents and a properties file |
-| [the rst format](docs/rst.md)         | read reStructuredText, as Sphinx documents are written   |
-| [the haproxy format](docs/haproxy.md) | read the documentation texts of HAProxy                  |
+## Commands
 
-`cat`, `convert`, `html` and `site` read Markdown, reStructuredText and the documentation texts of
-HAProxy, from the extension of the file or from a format that is named. `fmt`, `lint` and `toc` work
-on Markdown.
+| Command                        | Purpose                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| [dkt cat](docs/cat.md)         | render a document as styled text                         |
+| [dkt fmt](docs/fmt.md)         | rewrap prose and normalise block syntax                  |
+| [dkt toc](docs/toc.md)         | insert or refresh a table of contents                    |
+| [dkt lint](docs/lint.md)       | check links, anchors and heading structure               |
+| [dkt convert](docs/convert.md) | convert a document to Markdown                           |
+| [dkt html](docs/html.md)       | render a document as HTML, in a template                 |
+| [dkt site](docs/site.md)       | build a static site from documents and a properties file |
+
+The commands share one parser and one model. A command that takes a document reads a file or the
+standard input, and writes to the standard output unless an option says otherwise.
+
+## Formats
+
+Every document is read as Markdown first.
+
+| Format                                   | Extension | Read by                             |
+| ---------------------------------------- | --------- | ----------------------------------- |
+| Markdown                                 | `.md`     | every command                       |
+| [reStructuredText](docs/rst.md)          | `.rst`    | `cat`, `convert`, `html` and `site` |
+| [HAProxy documentation](docs/haproxy.md) | none      | `cat`, `convert`, `html` and `site` |
+
+- A file with another extension needs `--format`, a `.txt` file included.
+- `cat` writes such a file as it is when no format is named.
+- `fmt`, `lint` and `toc` work on Markdown only.
+
+## Install
 
 ```
 cargo build --release
 cargo install --path .
 ```
-
-Each command reads files or stdin and writes to stdout.
 
 ## Shell integration
 
@@ -34,14 +46,16 @@ dkt --completions zsh > ~/.local/share/zsh/site-functions/_dkt
 dkt --man > dkt.1
 ```
 
-The manual holds one page for `dkt` and one for each command.
+The manual has 1 page for `dkt` and 1 page for each command.
 
 ## Why
 
-Renderers reflow a paragraph the way CommonMark specifies, which shows every line break of a
-hand-wrapped source as a break on screen. `cat` joins them by default and keeps them on request,
-with continuation lines aligned under their list item or quote. `fmt` solves the same problem at
-the source: it rewraps the file so the breaks land where you want them.
+| Problem                                       | Answer                                                          |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| A renderer shows each hand-wrapped line break | `cat` joins the lines of a paragraph, and keeps them on request |
+| A source is wrapped at a width nobody chose   | `fmt` rewraps it to the width you give                          |
+| The documents are not all Markdown            | the formats above are read as Markdown                          |
+| A site needs its links to be right            | `site` checks the documents before it builds                    |
 
 ## Development
 
