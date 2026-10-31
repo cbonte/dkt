@@ -258,7 +258,7 @@ fn a_file_that_no_format_claims_is_written_as_it_is_with_a_warning() {
     );
 
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_dkt"))
-        .args(["cat", "--format", "markdown"])
+        .args(["cat", "--format", "markdown", "--borders", "unicode"])
         .arg(&file)
         .output()
         .expect("run dkt cat");
