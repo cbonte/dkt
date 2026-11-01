@@ -194,3 +194,33 @@ fn the_files_of_a_table_and_of_a_replay_are_checked() {
         "{out}"
     );
 }
+
+#[test]
+fn the_parts_that_a_scene_lights_are_in_its_figure() {
+    let dir = TempDir::new("scene");
+    dir.file(
+        "m.svg",
+        "<svg viewBox=\"0 0 10 10\"><rect id=\"gate\"/><rect id=\"core\"/></svg>",
+    );
+    dir.file(
+        "s.md",
+        "# S\n\n<!-- site: widget scene -->\n![M](m.svg)\n\n## Boot\n\n\
+         1. A <!-- site: light gate -->\n2. B <!-- site: light coer -gate -->\n\
+         <!-- site: end -->\n\n\
+         <!-- site: widget scene -->\n![M](gone.svg)\n\n1. A <!-- site: light gate -->\n<!-- site: end -->\n\n\
+         A stray one. <!-- site: light gate -->\n",
+    );
+    let o = run_in(&dir.0, &["s.md"], "");
+    assert!(!o.status.success());
+    let out = stdout(&o);
+    let lines: Vec<&str> = out.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            "s.md:9:6: site-annotation: scene: step 2 of the scene 'Boot' lights 'coer', but no part of the figure has that id",
+            "s.md:13:1: link-file: gone.svg does not exist",
+            "s.md:18:14: site-annotation: a light outside a scene: write it in a step of a scene widget",
+        ],
+        "{out}"
+    );
+}

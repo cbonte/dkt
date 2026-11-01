@@ -8,6 +8,7 @@ pub mod config;
 pub mod exclude;
 pub(crate) mod fromfile;
 mod links;
+pub(crate) mod scene;
 mod snapshots;
 pub mod versions;
 

@@ -442,14 +442,25 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
     // What is open: the kind, the name of the widget and where it starts.
     let mut open: Vec<(Kind, String, usize)> = Vec::new();
     for (event, range) in Parser::new_ext(src.text, parser_options()).into_offset_iter() {
-        let Event::Html(html) = event else { continue };
+        let (html, inline) = match event {
+            Event::Html(html) => (html, false),
+            Event::InlineHtml(html) => (html, true),
+            _ => continue,
+        };
         let Some(parsed) = annotation::from_html(&html) else {
             continue;
         };
+        let light = annotation::comment(&html).is_some_and(|b| b.trim().starts_with("site: light"));
+        // An annotation written inside a paragraph is read only when it is a `light`.
+        if inline && !light {
+            continue;
+        }
         let mut report = |message: String| {
             out.push(src.finding(range.start, Rule::SiteAnnotation, message));
         };
         match parsed {
+            // The scene reports a light of its own that does not hold.
+            Err(_) if light && open.last().is_some_and(|(_, name, _)| name == "scene") => {}
             Err(why) => report(format!("site annotation: {why}")),
             Ok(note) => match note.kind {
                 Kind::Replace | Kind::Widget if !open.is_empty() => {
@@ -484,6 +495,11 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
                 )),
                 Kind::End if open.pop().is_none() => {
                     report("an end with no replace or widget before it".to_string());
+                }
+                Kind::Light if open.last().is_none_or(|(_, name, _)| name != "scene") => {
+                    report(
+                        "a light outside a scene: write it in a step of a scene widget".to_string(),
+                    );
                 }
                 _ => {}
             },
@@ -523,6 +539,22 @@ fn check_widget_files(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<F
                 range.start,
                 Rule::SiteAnnotation,
                 format!("the {widget} cannot read {file}: {why:#}"),
+            ));
+        }
+    }
+}
+
+/// Checks the `scene` widgets: each one has a figure and steps, and the parts that its steps
+/// name are in its figure.
+fn check_scenes(src: &Source<'_>, out: &mut Vec<Finding>) {
+    let dir = src.path.parent().unwrap_or(Path::new("."));
+    for (widget, held) in crate::site::fromfile::scenes(src.text) {
+        for problem in crate::site::scene::problems(&src.text[held.clone()], dir) {
+            let at = problem.offset.map_or(widget, |o| held.start + o);
+            out.push(src.finding(
+                at,
+                Rule::SiteAnnotation,
+                format!("scene: {}", problem.message),
             ));
         }
     }
@@ -607,6 +639,7 @@ pub fn check(path: &Path, text: &str, enabled: &HashSet<Rule>, line_length: usiz
     check_blocks(&src, enabled, &mut out);
     if enabled.contains(&Rule::SiteAnnotation) {
         check_annotations(&src, &mut out);
+        check_scenes(&src, &mut out);
     }
     check_widget_files(&src, enabled, &mut out);
     check_lines(&src, enabled, line_length, &mut out);
@@ -762,7 +795,7 @@ mod tests {
         assert_eq!(
             out,
             [
-                "1:1: site-annotation: site annotation: unknown kind 'nope', expected one of page, figure, replace, end, alias, widget",
+                "1:1: site-annotation: site annotation: unknown kind 'nope', expected one of page, figure, replace, end, alias, widget, light",
                 "3:1: site-annotation: an end with no replace or widget before it",
                 "5:1: site-annotation: a replace is never closed by an end",
             ]
@@ -806,6 +839,31 @@ mod tests {
         );
         let unknown = "<!-- site: widget dance -->\n";
         assert!(findings(unknown, &[Rule::SiteAnnotation])[0].contains("unknown widget"));
+    }
+
+    #[test]
+    fn a_light_belongs_to_a_scene() {
+        let stray = "# T\n\n1. A step <!-- site: light gate -->\n\n<!-- site: light core -->\n";
+        let found = findings(stray, &[Rule::SiteAnnotation]);
+        assert_eq!(found.len(), 2, "{found:?}");
+        assert!(
+            found.iter().all(|f| f.contains("a light outside a scene")),
+            "{found:?}"
+        );
+        let bad = "# T\n\nText <!-- site: light a/b -->\n";
+        assert!(findings(bad, &[Rule::SiteAnnotation])[0].contains("'a/b' is not a part"));
+        let svg = "<svg aria-label=\"Boxes\"><rect id=\"gate\"/></svg>";
+        let scene = format!(
+            "# T\n\n<!-- site: widget scene -->\n{svg}\n\n1. A <!-- site: light gate -->\n2. B <!-- site: light gaet -->\n3. C <!-- site: light a/b -->\n<!-- site: end -->\n"
+        );
+        let found = findings(&scene, &[Rule::SiteAnnotation]);
+        assert_eq!(
+            found,
+            [
+                "7:6: site-annotation: scene: step 2 lights 'gaet', but no part of the figure has that id",
+                "8:6: site-annotation: scene: site annotation: 'a/b' is not a part: write an id, - and an id to turn it off, or -* to turn off every part",
+            ]
+        );
     }
 
     #[test]

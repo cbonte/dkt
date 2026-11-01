@@ -331,6 +331,48 @@ both, and a click on a pin goes to its item.
 
 <!-- site: end -->
 
+## Scene
+
+The steps of a list light, one after the other, the parts of an SVG figure.
+A `light` annotation in a step names the parts that it lights, and `-id` turns one off.
+The headings cut the widget in scenes, which share the figure.
+
+<!-- site: widget scene id=service -->
+
+![A service: a client, a gateway, a queue, a worker and a store](img/service.svg)
+
+### A request
+
+1. The client sends a request to the gateway. <!-- site: light client to-gateway gateway -->
+2. The gateway puts a job on the queue. <!-- site: light -client -to-gateway to-queue queue -->
+3. A worker takes the job from the queue. <!-- site: light -to-queue to-worker worker -->
+4. The worker writes the result in the store. <!-- site: light -queue -to-worker to-store store -->
+5. The gateway answers the client. <!-- site: light -* gateway reply client -->
+
+### A full queue
+
+1. The client sends a request to the gateway. <!-- site: light client to-gateway gateway -->
+2. The queue is full. <!-- site: light -to-gateway queue -->
+3. The gateway answers that it is busy. <!-- site: light -queue reply -->
+
+<!-- site: end -->
+
+```
+<!-- site: widget scene id=service -->
+![A service: a client, a gateway, a queue, a worker and a store](img/service.svg)
+
+### A request
+
+1. The client sends a request to the gateway. <!-- site: light client to-gateway gateway -->
+2. The gateway puts a job on the queue. <!-- site: light -client -to-gateway to-queue queue -->
+...
+
+### A full queue
+
+...
+<!-- site: end -->
+```
+
 ## Builder
 
 A form that writes a command or a file. The table gives the fields (a name, a label and the values),

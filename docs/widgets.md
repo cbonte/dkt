@@ -96,6 +96,7 @@ A change of `id`, or a move of the page to another address, forgets the state.
 | [`chart`](#chart)           | a table of numbers                                         | `type`                             |
 | [`flashcards`](#flashcards) | a table of 2 columns                                       |                                    |
 | [`annotated`](#annotated)   | a picture and a list                                       | `pins`                             |
+| [`scene`](#scene)           | an SVG figure and an ordered list                          | `autoplay`                         |
 | [`builder`](#builder)       | a table of fields and a code block                         |                                    |
 | [`replay`](#replay)         | a code block of a terminal session                         | `speed`                            |
 | [`since`](#since)           | headings that start with a version                         |                                    |
@@ -313,6 +314,100 @@ same order. There has to be as many positions as items, or the widget stays plai
 
 Pointing at a pin or at an item lights both, and the focus does the same. A click on a pin takes the
 reader to its item.
+
+## Scene
+
+```
+<!-- site: widget scene id=request autoplay=4000 -->
+![A service drawn as 4 regions](img/service.svg)
+
+1. A request reaches the gateway. <!-- site: light gateway -->
+2. The gateway hands it to a worker. <!-- site: light to-worker worker -->
+3. The worker writes the result. <!-- site: light -gateway to-store store -->
+<!-- site: end -->
+```
+
+The steps of a list light, one after the other, the parts of a figure.
+
+| Option     | Value                                | Effect                                                    |
+| ---------- | ------------------------------------ | --------------------------------------------------------- |
+| `autoplay` | a delay in milliseconds, 500 or more | the scene plays by itself once in view, a step each delay |
+
+The figure is the first picture of the widget, an SVG file written relative to the document.
+It can also be an `svg` element written in the widget, which its `title` or its `aria-label` names.
+A part of the figure is an element that has an `id`.
+The alternative text of the picture names the figure for a screen reader.
+
+Each item of the first ordered list is a step.
+A `light` annotation in a step names the parts that the step lights.
+It goes at the end of the text of the step, or on a line of its own inside the step.
+
+| Word  | Effect                          |
+| ----- | ------------------------------- |
+| `id`  | lights the part of that id      |
+| `-id` | turns off the part of that id   |
+| `-*`  | turns off every part lit before |
+
+A part stays lit until a step turns it off.
+A step turns off before it lights, so `-* gateway` leaves the gateway alone lit.
+An id is made of letters, digits, hyphens and underscores.
+A step with no `light` lights nothing new.
+
+### What the reader sees
+
+The figure and the steps stand side by side, or one above the other in a narrow column.
+The step on show is highlighted.
+The parts that it lights glow, the parts lit before stay clear, and the other parts that the steps name fade.
+A part drawn with a line and no fill, such as an arrow, is drawn along its length.
+A part that no step names keeps its look.
+
+The buttons are the previous step, `Play` or `Pause`, the next step and `Restart`.
+A click on a step goes to it, and so do `Enter` and `Space` on a step.
+The left and right arrows move between the steps.
+On a step, the up and down arrows do the same, and `Home` and `End` go to the first and the last step.
+An action of the reader pauses the scene.
+
+While the scene plays, a step stays the time that its text takes to read, or the delay of `autoplay`.
+The scene stops on its last step, and `Play` starts it again from the first.
+The step on show is told to a screen reader.
+A reader whose system asks for less motion gets no animation and no automatic start, and the animations of the figure stop.
+
+### Several scenes
+
+The headings of the shallowest level of the widget cut it in scenes, as they cut tabs.
+Each scene is the first ordered list under its heading, and the scenes share the figure.
+The reader picks a scene from its tab, and the scene chosen is remembered.
+
+2 widgets can also play on the same file.
+Each widget writes its own copy of the figure, so 1 widget with several scenes keeps the page lighter.
+
+### Without the script
+
+The steps stay a numbered list, and the figure stays whole, with no part faded.
+The parts lit at the end of the first scene glow.
+A printed page shows the same, with every scene and no buttons.
+
+### How the figure is written
+
+The site reads the figure when it builds the page, and writes it in the page, so that the style of the page reaches its parts.
+
+| What of the figure                           | What the page holds                         |
+| -------------------------------------------- | ------------------------------------------- |
+| an id                                        | the id with a prefix unique in the page     |
+| a link to an id, as `url(#shade)` or `#core` | a link to the id with its prefix            |
+| a style sheet                                | the same rules, applied to the figure alone |
+| a named animation                            | the animation, with the prefix              |
+| a script, an event attribute or an `@import` | nothing                                     |
+
+The figure has no limit of size, but the page carries it whole, once for each widget that shows it.
+
+The glow takes the colour `--dkt-scene-lit`, or `--accent` when the theme sets no such variable.
+The parts that fade take the opacity `--dkt-scene-dim`, 0.25 by default.
+A figure that draws its regions with the variables of the theme, such as `--surface`, `--line` and `--fg`, reads in both appearances.
+
+The build stops on a scene with no figure or no ordered list, and on a step that names an id that the figure lacks.
+`dkt lint` reports the same mistakes, and a `light` outside a step, with the rule `site-annotation`.
+The message names the step and the id.
 
 ## Builder
 

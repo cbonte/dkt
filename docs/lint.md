@@ -20,7 +20,7 @@ Findings are printed as `file:line:column: rule: message` and the exit code is 1
 | `heading-skip`      | on      | a heading level that jumps by more than one                                                                                |
 | `heading-dup`       | on      | 2 headings that produce the same anchor                                                                                    |
 | `image-alt`         | on      | an image with no alt text                                                                                                  |
-| `site-annotation`   | on      | a `<!-- site: ... -->` comment that does not hold, a `replace` or `widget` with no `end`, a widget file that does not read |
+| `site-annotation`   | on      | a `<!-- site: ... -->` comment that does not hold, a `replace` or `widget` with no `end`, a widget file that does not read, a scene step that names an id its figure lacks |
 | `heading-single-h1` | off     | more than one level one heading                                                                                            |
 | `fence-lang`        | off     | a fenced code block with no language                                                                                       |
 | `trailing-space`    | off     | trailing whitespace that is not a hard break                                                                               |

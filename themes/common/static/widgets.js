@@ -115,7 +115,8 @@
   }
 
   // One tab for each heading of the shallowest level, with the blocks that follow it.
-  function tabs(root, id) {
+  // `onselect` is told the position of each tab that is chosen.
+  function tabs(root, id, onselect) {
     var children = Array.prototype.slice.call(root.children);
     var level = 7;
     children.forEach(function (node) {
@@ -181,6 +182,7 @@
       });
       if (focus) tabsList[index].focus();
       save(id, index);
+      if (onselect) onselect(index);
       if (group && !quiet) chooseInGroup(group, labels[index], select);
     }
     var start = load(id);
@@ -328,6 +330,7 @@
     next: '<path d="M9 5l7 7-7 7"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
     play: '<path d="M8 5l11 7-11 7z" fill="currentColor"/>',
+    restart: '<path d="M2 4v6h6"/><path d="M4.5 15a9 9 0 1 0 2.1-9.4L2 10"/>',
   };
 
   function icon(name) {
@@ -589,6 +592,8 @@
     load: load,
     save: save,
     progress: progress,
+    icon: icon,
+    iconButton: iconButton,
     script: script,
     copyButtons: copyButtons,
   };

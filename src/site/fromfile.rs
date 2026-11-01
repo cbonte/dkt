@@ -10,25 +10,34 @@
 //! `<!-- site: widget table src=rules.tsv -->` builds the table from a file of values separated
 //! by tabs or by commas, whose first row gives the headings, or from a JSON or a YAML file.
 //! `columns="a,b"` keeps the columns of those headings, in that order.
+//!
+//! `<!-- site: widget scene -->` writes its SVG figure in the page, from its file or from the
+//! widget, and makes marks of the parts that its steps light.
 
+use std::ops::Range;
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 
-use super::snapshots;
+use super::{scene, snapshots};
 use crate::annotation::{self, Kind};
 
 /// The document with the sessions of its `replay` widgets and the tables of its `table` widgets
-/// read from their files.
+/// read from their files, and the figures of its `scene` widgets written in place.
 pub fn expand(markdown: &str, dir: Option<&Path>) -> Result<String> {
     let mut out = String::with_capacity(markdown.len());
     let mut lines = markdown.split_inclusive('\n');
     // The number of snapshot series so far, which names their rows apart.
     let mut series = 0;
+    // The number of scenes so far, which names their figures apart.
+    let mut scenes = 0;
+    // The number of the line being read, from 1.
+    let mut line_no = 0;
     // The fence of the code block that is open, whose lines are shown as they are.
     let mut fence: Option<String> = None;
     while let Some(line) = lines.next() {
+        line_no += 1;
         out.push_str(line);
         if let Some(open) = &fence {
             if closes(line, open) {
@@ -38,6 +47,26 @@ pub fn expand(markdown: &str, dir: Option<&Path>) -> Result<String> {
         }
         if let Some(opened) = opens(line) {
             fence = Some(opened);
+            continue;
+        }
+        if is_scene(line) {
+            let start = line_no;
+            let mut held = String::new();
+            let mut end = None;
+            for inner in lines.by_ref() {
+                line_no += 1;
+                if is_end(inner) {
+                    end = Some(inner);
+                    break;
+                }
+                held.push_str(inner);
+            }
+            scenes += 1;
+            let prefix = format!("dkt-f{:08x}-{scenes}", fnv(&held));
+            let body = scene::expand(&held, dir, &prefix)
+                .with_context(|| format!("in the scene of line {start}"))?;
+            out.push_str(&body);
+            out.push_str(end.unwrap_or_default());
             continue;
         }
         let Some((widget, src, columns)) = file_widget(line) else {
@@ -127,6 +156,50 @@ pub(crate) fn file_widget(line: &str) -> Option<(&'static str, String, Option<St
     };
     let src = note.get("src")?.to_string();
     Some((widget, src, note.get("columns").map(str::to_string)))
+}
+
+/// Whether a line opens a `scene` widget.
+fn is_scene(line: &str) -> bool {
+    annotation::comment(line)
+        .and_then(annotation::parse)
+        .is_some_and(|r| {
+            r.is_ok_and(|n| n.kind == Kind::Widget && n.get("widget") == Some("scene"))
+        })
+}
+
+/// The `scene` widgets of a document: where each annotation starts, and the range of the blocks
+/// it holds up to its `end`.
+pub(crate) fn scenes(markdown: &str) -> Vec<(usize, Range<usize>)> {
+    let mut out = Vec::new();
+    let mut fence: Option<String> = None;
+    let mut open: Option<(usize, usize)> = None;
+    let mut at = 0;
+    for line in markdown.split_inclusive('\n') {
+        let start = at;
+        at += line.len();
+        if let Some((widget, held)) = open {
+            if is_end(line) {
+                out.push((widget, held..start));
+                open = None;
+            }
+            continue;
+        }
+        if let Some(opened) = &fence {
+            if closes(line, opened) {
+                fence = None;
+            }
+            continue;
+        }
+        if let Some(opened) = opens(line) {
+            fence = Some(opened);
+        } else if is_scene(line) {
+            open = Some((start + line.len() - line.trim_start().len(), at));
+        }
+    }
+    if let Some((widget, held)) = open {
+        out.push((widget, held..markdown.len()));
+    }
+    out
 }
 
 fn is_end(line: &str) -> bool {

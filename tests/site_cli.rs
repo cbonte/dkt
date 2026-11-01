@@ -971,3 +971,143 @@ fn a_table_file_that_holds_no_table_stops_the_build() {
     assert!(err.contains("cannot read the table t.json"), "{err}");
     assert!(err.contains("the cell 'a' of item 1"), "{err}");
 }
+
+/// A figure of 3 parts, with a style and an animation of its own.
+const MACHINE: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60">
+<style>.box { fill: #ddd; } #gate { animation: hum 3s infinite; } @keyframes hum { 50% { opacity: .8 } }</style>
+<rect id="gate" class="box" width="30" height="30"/>
+<circle id="core" cx="60" cy="15" r="10"/>
+<path id="wire" d="M30 15H50" stroke="black" fill="none"/>
+</svg>
+"##;
+
+#[test]
+fn a_scene_writes_its_figure_in_the_page_and_marks_what_its_steps_light() {
+    let dir = TempDir::new("scene");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"docs\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    dir.file("img/machine.svg", MACHINE);
+    dir.file(
+        "a.md",
+        "# A\n\n<!-- site: widget scene id=flows autoplay=3000 -->\n\
+         ![A machine of 3 parts](img/machine.svg)\n\n\
+         ## Start\n\n\
+         1. The gate opens. <!-- site: light gate -->\n\
+         2. The wire carries the signal.\n   <!-- site: light wire -->\n\
+         3. The core answers. <!-- site: light core -gate -->\n\n\
+         ## Stop\n\n\
+         1. Everything stops. <!-- site: light -* core -->\n\
+         <!-- site: end -->\n\n\
+         <!-- site: widget scene -->\n\
+         ![The same machine](img/machine.svg)\n\n\
+         1. The gate alone. <!-- site: light gate -->\n\
+         <!-- site: end -->\n",
+    );
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let page = dir.read("public/a/index.html");
+    assert!(
+        page.contains("data-widget=\"scene\" data-id=\"flows\" data-autoplay=\"3000\""),
+        "{page}"
+    );
+    // The figure is in the page, its ids prefixed apart from the other figure of the page.
+    let open = "<figure class=\"dkt-stage\" id=\"";
+    let figures: Vec<&str> = page
+        .match_indices(open)
+        .map(|(at, _)| {
+            let rest = &page[at + open.len()..];
+            &rest[..rest.find('"').unwrap()]
+        })
+        .collect();
+    assert_eq!(figures.len(), 2, "{page}");
+    assert_ne!(figures[0], figures[1]);
+    let first = figures[0];
+    assert!(
+        page.contains(&format!(
+            "<rect id=\"{first}-gate\" class=\"box\" width=\"30\" height=\"30\" data-dkt-part=\"gate\"/>"
+        )),
+        "{page}"
+    );
+    // Without the script, the figure shows what the first scene leaves lit.
+    assert!(
+        page.contains(&format!(
+            "<circle id=\"{first}-core\" cx=\"60\" cy=\"15\" r=\"10\" data-dkt-part=\"core\" data-dkt-end/>"
+        )),
+        "{page}"
+    );
+    assert!(
+        page.contains("data-dkt-part=\"wire\" data-dkt-end/>"),
+        "{page}"
+    );
+    assert!(
+        page.contains("role=\"img\" aria-label=\"A machine of 3 parts\""),
+        "{page}"
+    );
+    // The style of the figure stays in the figure.
+    assert!(
+        page.contains(&format!(
+            ":where(#{first}) #{first}-gate{{ animation: {first}-hum 3s infinite; }}"
+        )),
+        "{page}"
+    );
+    // The steps stay a numbered list, with the marks that the script reads.
+    assert!(
+        page.contains("The gate opens. <span class=\"dkt-cue\" data-cue=\"gate\" hidden></span>"),
+        "{page}"
+    );
+    assert!(page.contains("data-cue=\"core -gate\""), "{page}");
+    assert!(page.contains("data-cue=\"-* core\""), "{page}");
+    assert!(page.contains("<h2 id=\"stop\">"), "{page}");
+    assert!(!page.contains("site: light"), "{page}");
+    assert!(
+        !page.contains("img/machine.svg"),
+        "the picture gives way to its figure"
+    );
+    let extra = dir.read("public/widgets-extra.js");
+    assert!(extra.contains("builders.scene = scene;"));
+}
+
+#[test]
+fn a_part_that_the_figure_lacks_stops_the_build() {
+    let dir = TempDir::new("scene-missing");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"docs\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    dir.file("m.svg", MACHINE);
+    dir.file(
+        "a.md",
+        "# A\n\n<!-- site: widget scene -->\n![M](m.svg)\n\n1. One <!-- site: light gate -->\n2. Two <!-- site: light gaet -->\n<!-- site: end -->\n",
+    );
+    let out = build(&dir, &[]);
+    assert!(!out.status.success());
+    let err = stderr(&out);
+    assert!(err.contains("in the scene of line 3"), "{err}");
+    assert!(
+        err.contains("step 2 lights 'gaet', but no part of the figure has that id"),
+        "{err}"
+    );
+}
+
+#[test]
+fn the_logic_of_the_scenes_holds() {
+    if Command::new("node").arg("--version").output().is_err() {
+        eprintln!("node is not installed: the logic of the scenes is not checked");
+        return;
+    }
+    let out = Command::new("node")
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/js/scene_core.js"
+        ))
+        .output()
+        .expect("run node");
+    assert!(
+        out.status.success(),
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+}

@@ -155,6 +155,7 @@ an annotation when it starts with `site:` and a kind. The kind sets what it appl
 | `replace` to `end` | the blocks between them          | the keys of `figure`, and the blocks give way to its figure                   |
 | `alias`            | the section it is written in     | `words`, the words that find the section in a search                          |
 | `widget` to `end`  | the blocks between them          | the name of a [widget](widgets.md), `id`, and `answer` for a quiz |
+| `light`            | the step of a scene it is in     | the ids of the parts that the step lights, `-id` to turn one off, `-*` to turn all off |
 
 ```
 <!-- site: page title="The tour" nav-title="Tour" weight=2 -->
@@ -174,4 +175,4 @@ double quotes.
 
 `dkt lint` reports an annotation that does not hold: an unknown kind, widget or key, a missing `src`
 or `name`, an `alias` with no words, a weight that is not a number, an `end` with no `replace`, a
-`replace` never closed. A comment that does not start with `site:` is left alone.
+`replace` never closed, a `light` outside a scene. A comment that does not start with `site:` is left alone.

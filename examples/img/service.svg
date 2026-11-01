@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" width="640" height="300">
+<title>A service: a client, a gateway, a queue, a worker and a store</title>
+<style>
+.region { fill: var(--surface, #f6f7f9); stroke: var(--line, #c9ced6); stroke-width: 1.5; }
+.label { fill: var(--fg, #16181d); font: 600 15px system-ui, sans-serif; text-anchor: middle; }
+.link { fill: none; stroke: var(--muted, #5b6370); stroke-width: 2.2; }
+.head { fill: var(--muted, #5b6370); }
+.beat { fill: var(--accent, #c2410c); animation: beat 2.4s ease-in-out infinite; }
+@keyframes beat { 50% { opacity: .3; } }
+</style>
+<defs>
+<marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+<g id="client"><rect class="region" x="16" y="118" width="110" height="64" rx="12"/><text class="label" x="71" y="155">Client</text></g>
+<g id="gateway"><rect class="region" x="182" y="118" width="120" height="64" rx="12"/><text class="label" x="242" y="155">Gateway</text></g>
+<g id="queue"><rect class="region" x="358" y="28" width="120" height="64" rx="12"/><text class="label" x="418" y="65">Queue</text></g>
+<g id="worker"><rect class="region" x="358" y="208" width="120" height="64" rx="12"/><text class="label" x="418" y="245">Worker</text></g>
+<g id="store"><rect class="region" x="512" y="118" width="112" height="64" rx="12"/><text class="label" x="568" y="155">Store</text><circle class="beat" cx="606" cy="134" r="5"/></g>
+<path id="to-gateway" class="link" d="M126 140H176" marker-end="url(#head)"/>
+<path id="reply" class="link" d="M182 164H132" marker-end="url(#head)"/>
+<path id="to-queue" class="link" d="M302 134C330 120 334 64 352 62" marker-end="url(#head)"/>
+<path id="to-worker" class="link" d="M418 92V202" marker-end="url(#head)"/>
+<path id="to-store" class="link" d="M478 240C506 240 512 196 540 186" marker-end="url(#head)"/>
+</svg>

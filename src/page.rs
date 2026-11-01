@@ -367,6 +367,8 @@ pub fn render_with(md: &str, hooks: &Hooks<'_>) -> Page {
                             body.push(Event::Html(CowStr::from(close)));
                         }
                     }
+                    // What a step of a scene lights is read by the site before the page.
+                    Kind::Light => {}
                     Kind::Alias => {
                         if let Some(words) = note.get("words") {
                             page.aliases.push(Alias {

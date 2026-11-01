@@ -7,6 +7,8 @@
 //! `replace` applies to the blocks up to the next `end`.
 //! `alias` applies to the section it is written in, and gives the words that find it in a search.
 //! `widget` applies to the blocks up to the next `end`, and makes a component of them.
+//! `light` applies to the step of a `scene` widget it is written in, and names the parts of the
+//! figure that the step lights or turns off.
 //! A comment that does not start with `site:` is not an annotation and is left alone.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -20,11 +22,12 @@ pub enum Kind {
     End,
     Alias,
     Widget,
+    Light,
 }
 
 /// The components a `widget` annotation can name, with the keys and the flags each one takes
 /// besides `id`.
-pub const WIDGETS: [(&str, &[&str], &[&str]); 15] = [
+pub const WIDGETS: [(&str, &[&str], &[&str]); 16] = [
     ("tabs", &["group"], &[]),
     ("checklist", &[], &[]),
     ("quiz", &["answer"], &[]),
@@ -40,6 +43,7 @@ pub const WIDGETS: [(&str, &[&str], &[&str]); 15] = [
     ("replay", &["speed", "src"], &[]),
     ("since", &[], &[]),
     ("progress", &[], &[]),
+    ("scene", &["autoplay"], &[]),
 ];
 
 /// The names of the widgets.
@@ -75,6 +79,11 @@ fn is_name(word: &str) -> bool {
             .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
 }
 
+/// True for a word of a `light` annotation: an id, `-` and an id, or `-*`.
+fn is_cue(word: &str) -> bool {
+    word == "-*" || (is_name(word.strip_prefix('-').unwrap_or(word)) && !word.starts_with("--"))
+}
+
 /// The kinds of chart.
 const CHART_TYPES: [&str; 2] = ["bar", "line"];
 
@@ -92,13 +101,14 @@ const MAX_SHOWN: usize = 6;
 const MIN_AUTOPLAY: u32 = 500;
 
 impl Kind {
-    pub const ALL: [Kind; 6] = [
+    pub const ALL: [Kind; 7] = [
         Kind::Page,
         Kind::Figure,
         Kind::Replace,
         Kind::End,
         Kind::Alias,
         Kind::Widget,
+        Kind::Light,
     ];
 
     pub fn name(self) -> &'static str {
@@ -109,6 +119,7 @@ impl Kind {
             Kind::End => "end",
             Kind::Alias => "alias",
             Kind::Widget => "widget",
+            Kind::Light => "light",
         }
     }
 
@@ -116,7 +127,7 @@ impl Kind {
         match self {
             Kind::Page => &["title", "description", "nav-title", "weight"],
             Kind::Figure | Kind::Replace => &["name", "src", "dark", "alt", "caption"],
-            Kind::End => &[],
+            Kind::End | Kind::Light => &[],
             Kind::Alias => &["words"],
             Kind::Widget => &["id"],
         }
@@ -249,6 +260,19 @@ fn parse_annotation(rest: &str) -> Result<Annotation, String> {
         args: BTreeMap::new(),
         flags: BTreeSet::new(),
     };
+    if kind == Kind::Light {
+        let parts: Vec<String> = words.collect();
+        if parts.is_empty() {
+            return Err("'light' needs the ids of parts of the figure".to_string());
+        }
+        if let Some(bad) = parts.iter().find(|p| !is_cue(p)) {
+            return Err(format!(
+                "'{bad}' is not a part: write an id, - and an id to turn it off, or -* to turn off every part"
+            ));
+        }
+        annotation.args.insert("parts".to_string(), parts.join(" "));
+        return Ok(annotation);
+    }
     for word in words {
         if kind == Kind::Widget && !annotation.args.contains_key("widget") && !word.contains('=') {
             if !WIDGETS.iter().any(|(name, _, _)| *name == word) {
@@ -462,6 +486,20 @@ mod tests {
         assert!(refused(" site: end now").contains("does not take"));
         assert!(refused(" site: alias").contains("needs words"));
         assert!(refused(r#" site: alias words="" "#).contains("needs words"));
+    }
+
+    #[test]
+    fn a_light_names_parts_to_light_and_to_turn_off() {
+        let a = parsed(" site: light gateway -vision -* ");
+        assert_eq!(a.kind, Kind::Light);
+        assert_eq!(a.get("parts"), Some("gateway -vision -*"));
+        assert!(refused(" site: light").contains("needs the ids"));
+        assert!(refused(" site: light a/b").contains("'a/b' is not a part"));
+        assert!(refused(" site: light --x").contains("is not a part"));
+        assert!(refused(" site: light -").contains("is not a part"));
+        let scene = parsed(" site: widget scene id=flow autoplay=3000 ");
+        assert_eq!(scene.get("autoplay"), Some("3000"));
+        assert!(refused(" site: widget scene autoplay=10 ").contains("autoplay is"));
     }
 
     #[test]

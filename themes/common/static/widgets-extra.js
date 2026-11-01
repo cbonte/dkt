@@ -1,9 +1,13 @@
 // The widgets that a page loads only when it holds one: a filterable table, a comparison of 2
 // pictures, a diff, a chart, flashcards and the others. widgets.js loads this file.
+// Under node, the file gives the logic of the scenes, which needs no page.
 (function () {
   "use strict";
 
-  var dkt = window.dkt;
+  if (typeof module === "object" && module.exports) {
+    module.exports = { sceneStates: sceneStates, scenePace: scenePace, scenePlayer: scenePlayer };
+  }
+  var dkt = typeof window === "undefined" ? null : window.dkt;
   if (!dkt) return;
   var make = dkt.make;
   var builders = dkt.builders;
@@ -994,6 +998,324 @@
     return false;
   }
 
+  // The steps of a scene, as the parts that each one leaves lit and the parts that it lights.
+  // A step turns off before it lights: `-*` turns off every part, `-id` 1 part, and `id` lights it.
+  function sceneStates(cues) {
+    var lit = Object.create(null);
+    return cues.map(function (cue) {
+      var words = (cue || "").split(/\s+/).filter(Boolean);
+      if (words.indexOf("-*") >= 0) lit = Object.create(null);
+      words.forEach(function (word) {
+        if (word.charAt(0) === "-") delete lit[word.slice(1)];
+      });
+      var fresh = [];
+      words.forEach(function (word) {
+        if (word.charAt(0) === "-") return;
+        lit[word] = true;
+        if (fresh.indexOf(word) < 0) fresh.push(word);
+      });
+      return { lit: Object.keys(lit).sort(), fresh: fresh };
+    });
+  }
+
+  // How long a step stays on show while the scene plays, when the widget gives no delay.
+  // It is the time that its text takes to read at 200 words a minute, and at least 2.5 seconds.
+  function scenePace(text) {
+    var words = (text || "").split(/\s+/).filter(Boolean).length;
+    return Math.max(2500, words * 300);
+  }
+
+  // The player of a scene: the step on show, and whether the scene plays.
+  // It holds no timer: the page calls `tick` once a step has stayed its time.
+  // An action of the reader pauses the scene, and an automatic start comes only before any action.
+  // A reader who asks for less motion gets no automatic start.
+  function scenePlayer(count, reduced) {
+    var last = Math.max(0, count - 1);
+    var p = { at: 0, playing: false, touched: false };
+    p.go = function (n) {
+      p.at = Math.max(0, Math.min(last, n));
+      p.playing = false;
+      p.touched = true;
+    };
+    p.next = function () {
+      p.go(p.at + 1);
+    };
+    p.previous = function () {
+      p.go(p.at - 1);
+    };
+    p.play = function () {
+      if (p.at >= last) p.at = 0;
+      p.playing = last > 0;
+      p.touched = true;
+    };
+    p.pause = function () {
+      p.playing = false;
+      p.touched = true;
+    };
+    p.toggle = function () {
+      if (p.playing) p.pause();
+      else p.play();
+    };
+    p.restart = function () {
+      p.at = 0;
+      p.touched = true;
+      p.playing = !reduced && last > 0;
+    };
+    p.tick = function () {
+      if (!p.playing) return;
+      if (p.at < last) p.at++;
+      if (p.at >= last) p.playing = false;
+    };
+    p.autostart = function () {
+      if (!reduced && !p.touched && last > 0) p.playing = true;
+    };
+    return p;
+  }
+
+  // A scene played on a figure: each step of a list lights parts of the figure.
+  // The build writes the figure in the page, marks its parts with `data-dkt-part`, and makes the
+  // `light` annotations of the steps into `.dkt-cue` marks.
+  // The scenes of a widget with headings are its tabs, and they share the figure.
+  function scene(root, id) {
+    var stage = root.querySelector(".dkt-stage");
+    if (!stage || !root.querySelector("ol")) return false;
+    var svg = stage.querySelector("svg");
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var delay = parseInt(root.getAttribute("data-autoplay"), 10) || 0;
+    var parts = {};
+    all(stage, "[data-dkt-part]").forEach(function (node) {
+      parts[node.getAttribute("data-dkt-part")] = node;
+    });
+    var layout = make("div", "dkt-scene");
+    var side = make("div", "dkt-scene-side");
+    root.insertBefore(layout, root.firstChild);
+    Array.prototype.slice.call(root.childNodes).forEach(function (node) {
+      if (node !== layout && node !== stage) side.appendChild(node);
+    });
+    layout.appendChild(stage);
+    layout.appendChild(side);
+
+    function steps(holder) {
+      var list = Array.prototype.filter.call(holder.children, function (node) {
+        return node.tagName === "OL";
+      })[0];
+      if (!list) return null;
+      list.classList.add("dkt-steps");
+      var items = Array.prototype.filter.call(list.children, function (node) {
+        return node.tagName === "LI";
+      });
+      if (!items.length) return null;
+      var cues = items.map(function (item) {
+        return all(item, ".dkt-cue")
+          .map(function (cue) {
+            return cue.getAttribute("data-cue");
+          })
+          .join(" ");
+      });
+      return { items: items, states: sceneStates(cues) };
+    }
+
+    var scenes = [];
+    var chosen = 0;
+    var ready = false;
+    var tabbed = dkt.builders.tabs(side, id + "-scene", function (index) {
+      chosen = index;
+      if (ready) choose(index);
+    });
+    Array.prototype.forEach.call(side.children, function (node) {
+      if (node.classList.contains("dkt-panel")) {
+        scenes.push(steps(node));
+        var name = node.querySelector(".dkt-sr");
+        if (name) name.classList.add("dkt-scene-name");
+      }
+    });
+    if (!tabbed) scenes.push(steps(side));
+
+    var bar = make("div", "dkt-controls dkt-scene-bar");
+    var previous = dkt.iconButton("previous", "Previous step", function () {
+      act("previous");
+    });
+    var toggle = make("button", "dkt-icon dkt-toggle");
+    toggle.type = "button";
+    toggle.innerHTML = dkt.icon("pause") + dkt.icon("play");
+    toggle.addEventListener("click", function () {
+      act("toggle");
+    });
+    var following = dkt.iconButton("next", "Next step", function () {
+      act("next");
+    });
+    var again = dkt.iconButton("restart", "Restart the scene", function () {
+      act("restart");
+    });
+    var count = make("span", "dkt-scene-count");
+    count.setAttribute("aria-hidden", "true");
+    [previous, toggle, following, again, count].forEach(function (node) {
+      bar.appendChild(node);
+    });
+    side.appendChild(bar);
+    var live = make("p", "dkt-sr");
+    live.setAttribute("aria-live", "polite");
+    root.appendChild(live);
+
+    var current = null;
+    var player = null;
+    var timer = null;
+    var shown = -1;
+
+    // A shape drawn with a line and no fill is drawn along its length.
+    function draw(node) {
+      [node].concat(all(node, "path, line, polyline, polygon, circle, ellipse, rect")).forEach(function (shape) {
+        if (!shape.getTotalLength) return;
+        var look = getComputedStyle(shape);
+        if (look.fill !== "none" || look.stroke === "none") return;
+        var length = 0;
+        try {
+          length = shape.getTotalLength();
+        } catch (e) {}
+        if (!length) return;
+        shape.style.setProperty("--dkt-len", length);
+        shape.classList.remove("dkt-draw");
+        shape.getBoundingClientRect();
+        shape.classList.add("dkt-draw");
+      });
+    }
+
+    // The parts lit stay clear, those of the step glow, and the other parts fade.
+    // A part that holds a lit part, or sits in one, does not fade.
+    function light(state) {
+      var lit = Object.create(null);
+      var fresh = Object.create(null);
+      state.lit.forEach(function (name) {
+        lit[name] = true;
+      });
+      state.fresh.forEach(function (name) {
+        fresh[name] = true;
+      });
+      Object.keys(parts).forEach(function (name) {
+        var node = parts[name];
+        node.classList.toggle("dkt-lit", !!lit[name]);
+        node.classList.remove("dkt-fresh");
+        if (!fresh[name]) return;
+        node.getBoundingClientRect();
+        node.classList.add("dkt-fresh");
+        if (!reduced) draw(node);
+      });
+      Object.keys(parts).forEach(function (name) {
+        var node = parts[name];
+        var near = lit[name] || node.querySelector(".dkt-lit") || node.parentNode.closest(".dkt-lit");
+        node.classList.toggle("dkt-dim", !near);
+      });
+    }
+
+    function render(announce) {
+      clearTimeout(timer);
+      timer = null;
+      var at = player ? player.at : -1;
+      var n = current ? current.items.length : 0;
+      if (current) {
+        current.items.forEach(function (item, i) {
+          item.classList.toggle("dkt-current", i === at);
+          item.classList.toggle("dkt-done", i < at);
+          if (i === at) item.setAttribute("aria-current", "step");
+          else item.removeAttribute("aria-current");
+          item.tabIndex = i === at ? 0 : -1;
+        });
+      }
+      var changed = at !== shown;
+      if (changed) light((current && current.states[at]) || { lit: [], fresh: [] });
+      shown = at;
+      var playing = !!(player && player.playing);
+      toggle.setAttribute("data-state", playing ? "playing" : "paused");
+      toggle.setAttribute("aria-label", playing ? "Pause the scene" : "Play the scene");
+      previous.disabled = at <= 0;
+      following.disabled = at >= n - 1;
+      toggle.disabled = again.disabled = n < 2;
+      count.textContent = n ? at + 1 + " / " + n : "";
+      if (announce && changed && n) {
+        live.textContent = "Step " + (at + 1) + " of " + n + ": " + current.items[at].textContent.trim();
+      }
+      if (playing && !document.hidden) {
+        timer = setTimeout(advance, delay || scenePace(current.items[at].textContent));
+      }
+    }
+
+    function advance() {
+      timer = null;
+      if (document.hidden) return;
+      player.tick();
+      render(true);
+    }
+
+    function act(name, arg) {
+      if (!player) return;
+      player[name](arg);
+      render(true);
+    }
+
+    function choose(index) {
+      current = scenes[index] || null;
+      player = current ? scenePlayer(current.items.length, reduced) : null;
+      shown = -1;
+      render(false);
+    }
+
+    scenes.forEach(function (one) {
+      if (!one) return;
+      one.items.forEach(function (item, i) {
+        item.addEventListener("click", function (event) {
+          if (event.target.closest("a, button, input, summary")) return;
+          act("go", i);
+        });
+        item.addEventListener("keydown", function (event) {
+          if (event.target !== item || (event.key !== "Enter" && event.key !== " ")) return;
+          event.preventDefault();
+          act("go", i);
+        });
+      });
+    });
+
+    // The arrows move between the steps, and on a step so do `Home` and `End`.
+    root.addEventListener("keydown", function (event) {
+      if (!player || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.target.closest(".dkt-tablist")) return;
+      var onStep = event.target.closest(".dkt-steps > li");
+      var moves = { ArrowRight: player.at + 1, ArrowLeft: player.at - 1 };
+      if (onStep) {
+        moves.ArrowDown = player.at + 1;
+        moves.ArrowUp = player.at - 1;
+        moves.Home = 0;
+        moves.End = current.items.length - 1;
+      }
+      var to = moves[event.key];
+      if (to === undefined) return;
+      event.preventDefault();
+      act("go", to);
+      if (onStep) current.items[player.at].focus();
+    });
+
+    stage.addEventListener("animationend", function (event) {
+      if (event.animationName === "dkt-scene-draw") event.target.classList.remove("dkt-draw");
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && player && player.playing && !timer) render(false);
+    });
+
+    if (reduced && svg && svg.pauseAnimations) svg.pauseAnimations();
+    ready = true;
+    choose(chosen);
+    if (delay && !reduced && "IntersectionObserver" in window) {
+      var seen = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting) return;
+        seen.disconnect();
+        if (!player) return;
+        player.autostart();
+        render(false);
+      });
+      seen.observe(stage);
+    }
+    return true;
+  }
+
   builders.table = table;
   builders.compare = compare;
   builders.diff = diff;
@@ -1004,4 +1326,5 @@
   builders.replay = replay;
   builders.since = since;
   builders.progress = course;
+  builders.scene = scene;
 })();

@@ -24,6 +24,7 @@
 - site: remove the files that a new build of a version no longer writes.
 - site: warn when a version was built by another dkt.
 - site: keep the anchor of the page when the chosen version has it.
+- widgets: light the parts of an SVG figure step by step with the scene widget.
 
 ## Changed
 
