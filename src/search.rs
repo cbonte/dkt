@@ -139,10 +139,9 @@ pub fn to_json(entries: &[Entry]) -> String {
     out
 }
 
-/// The index of a partial build: what the existing index holds for the pages that were not built,
-/// then the new entries. The existing index is read as the objects it is made of, and a page is
-/// told by the address before the anchor of an entry.
-pub fn merge(existing: &str, built: &HashSet<String>, new: &[Entry]) -> String {
+/// The objects of a JSON array, each as it is written. The existing index is read as the objects it
+/// is made of, so that a build of a part of the site keeps those of the pages it leaves.
+pub fn objects(existing: &str) -> Vec<&str> {
     let mut kept: Vec<&str> = Vec::new();
     let (mut start, mut depth, mut in_string, mut escaped) = (0, 0, false, false);
     for (at, c) in existing.char_indices() {
@@ -172,6 +171,14 @@ pub fn merge(existing: &str, built: &HashSet<String>, new: &[Entry]) -> String {
             _ => {}
         }
     }
+    kept
+}
+
+/// The index of a partial build: what the existing index holds for the pages that were not built,
+/// then the new entries. The existing index is read as the objects it is made of, and a page is
+/// told by the address before the anchor of an entry.
+pub fn merge(existing: &str, built: &HashSet<String>, new: &[Entry]) -> String {
+    let kept = objects(existing);
     let url_of = |object: &str| -> Option<String> {
         let after = &object[object.find(",\"u\":\"")? + 6..];
         let end = after.find('"')?;

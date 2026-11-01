@@ -365,8 +365,10 @@ are the widgets that a reader goes through.
 The build writes the file `widgets.json` at the root of the site, with the address, the title and
 the widgets of each page that holds some, as
 `{"u": "/guides/a/", "t": "A", "w": [{"i": "start", "k": "checklist", "n": 3}]}`. The widget reads
-it and looks in the browser for what each widget remembers. A build of a part of the site leaves the
-file as it is. A site with no such widget has no file.
+it and looks in the browser for what each widget remembers. A build of a part of the site keeps
+the entries of the pages it does not build, and writes again those of the pages it builds and
+those under the address of a section it builds. A page that leaves the address of its section
+keeps its old entry. A site with no such widget has no file.
 
 Give an `id` to the widgets that the page counts, since a widget with none changes name when another
 comes above it.

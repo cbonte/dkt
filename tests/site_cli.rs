@@ -849,3 +849,47 @@ fn an_asset_directory_leaves_out_what_its_patterns_name_at_any_depth() {
     assert!(!out.status.success());
     assert!(stderr(&out).contains("img/sub/y.psd"), "{}", stderr(&out));
 }
+
+#[test]
+fn a_partial_build_keeps_the_widgets_of_the_other_pages_and_replaces_its_own() {
+    let dir = TempDir::new("partial-widgets");
+    two_sections(&dir);
+    let both = |extra: &str| {
+        let config = std::fs::read_to_string(dir.path("dkt.toml")).expect("config");
+        config.replace(
+            "[[page]]\nsrc = \"b/doc.md\"",
+            &format!("{extra}[[page]]\nsrc = \"b/doc.md\""),
+        )
+    };
+    let widget = |id: &str| {
+        format!(
+            "# Doc\n\nlede\n\n<!-- site: widget checklist id={id} -->\n- [ ] one\n- [ ] two\n<!-- site: end -->\n"
+        )
+    };
+    dir.file("a/doc.md", &widget("a-old"));
+    dir.file("a/gone.md", &widget("a-gone"));
+    dir.file("b/doc.md", &widget("b-first"));
+    dir.file(
+        "dkt.toml",
+        &both("[[page]]\nsrc = \"a/gone.md\"\nsection = \"a\"\n\n"),
+    );
+    assert!(build(&dir, &[]).status.success());
+    let first = dir.read("public/widgets.json");
+    for id in ["a-old", "a-gone", "b-first"] {
+        assert!(first.contains(id), "{first}");
+    }
+
+    // The section a loses a page and changes a widget, the section b is not read again.
+    dir.file("a/doc.md", &widget("a-new"));
+    dir.file("b/doc.md", &widget("b-changed-but-not-built"));
+    let config = both("").replace("[[page]]\nsrc = \"a/gone.md\"\nsection = \"a\"\n\n", "");
+    dir.file("dkt.toml", &config);
+    let out = build(&dir, &["--only", "section:a"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let second = dir.read("public/widgets.json");
+    assert!(second.contains("a-new"), "{second}");
+    assert!(!second.contains("a-old"), "{second}");
+    assert!(!second.contains("a-gone"), "{second}");
+    assert!(second.contains("b-first"), "{second}");
+    assert!(!second.contains("b-changed-but-not-built"), "{second}");
+}

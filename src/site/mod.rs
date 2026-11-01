@@ -247,18 +247,33 @@ struct Entry {
 
 /// The file that tells a page of progress what each page holds that a reader can finish. It is
 /// not written for a site that has nothing of the kind.
-fn write_widgets(out: &Path, links: &[PageLink], pages: &[Searchable]) -> Result<()> {
-    let mut json = String::from("[");
-    let mut first = true;
+fn write_widgets(
+    out: &Path,
+    links: &[PageLink],
+    pages: &[Searchable],
+    kept: Option<(&HashSet<String>, &[String])>,
+) -> Result<()> {
+    let mut entries: Vec<String> = Vec::new();
+    // A build of a part of the site keeps what the file says of the pages it did not build: the
+    // pages it built, and the ones under the address of a section it built, are written again.
+    if let Some((built, rebuilt)) = kept
+        && let Ok(existing) = fs::read_to_string(out.join("widgets.json"))
+    {
+        for object in crate::search::objects(&existing) {
+            let url = object
+                .find("\"u\":\"")
+                .and_then(|at| object[at + 5..].split('"').next())
+                .unwrap_or_default();
+            if !built.contains(url) && !rebuilt.iter().any(|prefix| url.starts_with(prefix)) {
+                entries.push(object.to_string());
+            }
+        }
+    }
     for (link, page) in links.iter().zip(pages) {
         if page.widgets.is_empty() {
             continue;
         }
-        if !first {
-            json.push(',');
-        }
-        first = false;
-        json.push_str("{\"u\":");
+        let mut json = String::from("{\"u\":");
         crate::search::quote(&link.url, &mut json);
         json.push_str(",\"t\":");
         crate::search::quote(&link.title, &mut json);
@@ -274,13 +289,16 @@ fn write_widgets(out: &Path, links: &[PageLink], pages: &[Searchable]) -> Result
             json.push_str(&format!(",\"n\":{}}}", widget.total));
         }
         json.push_str("]}");
+        entries.push(json);
     }
-    json.push(']');
-    if !first {
-        let to = out.join("widgets.json");
-        fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
+    let to = out.join("widgets.json");
+    if entries.is_empty() {
+        // A site with no such widget has no file.
+        let _ = fs::remove_file(&to);
+        return Ok(());
     }
-    Ok(())
+    fs::write(&to, format!("[{}]", entries.join(",")))
+        .with_context(|| format!("cannot write {}", to.display()))
 }
 
 /// What the search keeps of a page once it is written.
@@ -1003,8 +1021,17 @@ pub fn build(opts: &Options) -> Result<Report> {
         };
         fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
     }
-    if !scope.partial() {
-        write_widgets(&opts.out, &links_of_pages, &pages)?;
+    if scope.partial() {
+        let built: HashSet<String> = links_of_pages.iter().map(|l| l.url.clone()).collect();
+        let rebuilt: Vec<String> = cfg
+            .section
+            .iter()
+            .filter(|s| scope.builds_section(&s.name))
+            .map(|s| site.sections[&s.name].url.clone())
+            .collect();
+        write_widgets(&opts.out, &links_of_pages, &pages, Some((&built, &rebuilt)))?;
+    } else {
+        write_widgets(&opts.out, &links_of_pages, &pages, None)?;
     }
     Ok(Report { pages: written })
 }

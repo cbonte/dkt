@@ -33,7 +33,7 @@ given several times.
 The documents out of the scope are not read, so a build can run where only the documents that
 changed are present. The check runs over the documents that are built, and a link to a page that is
 not built goes to the address the properties give it. The search index keeps its entries for the
-pages that are not built and replaces the others.
+pages that are not built and replaces the others, and so does the file of the widgets.
 
 A template that lists the pages of a section shows none for a section that is not built.
 

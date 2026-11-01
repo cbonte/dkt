@@ -10,6 +10,10 @@
 
 - site: refuse repo and branch in the site table, and read the repository link from data.repo instead.
 
+## Fixed
+
+- site: keep the widgets file of the pages a partial build does not build.
+
 # 0.2.0 - 2026-10-31
 
 ## Added
