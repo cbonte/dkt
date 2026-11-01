@@ -124,6 +124,17 @@ pub struct Section {
     /// Whether a page of the section ends with links to the previous and to the next page.
     #[serde(default)]
     pub pager: bool,
+    /// The groups of its menu, in order. A section with none lists its pages in one run.
+    #[serde(default)]
+    pub group: Vec<Group>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Group {
+    pub title: String,
+    /// The documents of the group, each by its `src` or by a pattern such as `docs/guides/*.md`
+    /// that stands for several, ordered by weight and title.
+    pub pages: Vec<String>,
 }
 
 fn default_section_template() -> String {

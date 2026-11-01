@@ -880,6 +880,7 @@ pub fn build(opts: &Options) -> Result<Report> {
                 description: s.description.clone(),
                 url,
                 pages: Vec::new(),
+                groups: Vec::new(),
             },
         );
     }
@@ -891,6 +892,16 @@ pub fn build(opts: &Options) -> Result<Report> {
     for view in sections.values_mut() {
         view.pages
             .sort_by(|a, b| (a.weight, &a.title).cmp(&(b.weight, &b.title)));
+    }
+    let by_src: Vec<(&str, &PageLink)> = entries
+        .iter()
+        .zip(&links_of_pages)
+        .map(|(entry, link)| (entry.src.as_str(), link))
+        .collect();
+    for s in &cfg.section {
+        if let Some(view) = sections.get_mut(&s.name) {
+            view.groups = menu_groups(s, &by_src)?;
+        }
     }
 
     let site = SiteView {
@@ -1118,6 +1129,15 @@ pub fn build(opts: &Options) -> Result<Report> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_group_names_pages_by_path_or_by_pattern() {
+        assert!(names("docs/a.md", "docs/a.md"));
+        assert!(names("./docs/a.md", "docs/a.md"));
+        assert!(names("docs/guides/*.md", "docs/guides/x.md"));
+        assert!(!names("docs/guides/*.md", "docs/guides/sub/x.md"));
+        assert!(!names("docs/guides/*.md", "docs/other/x.md"));
+    }
 
     #[test]
     fn the_base_path_is_the_path_of_the_address() {

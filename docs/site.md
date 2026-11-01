@@ -57,6 +57,29 @@ refused by the check as `link-unserved`, since it would leave the site: publish 
 link as a full address. `[lint] disable = ["link-unserved"]` leaves such a link as written. A target
 that does not exist is left as written, and the check reports it.
 
+## The menu of a section
+
+A section that asks for a `sidebar` lists its pages in one run. `[[section.group]]` splits the list
+into titled groups, and a template reads them as `site.sections.NAME.groups`, each with a `title` and its `pages`.
+
+```
+[[section]]
+name = "guides"
+sidebar = true
+
+[[section.group]]
+title = "Get started"
+pages = ["docs/start/overview.md", "docs/start/install.md"]
+
+[[section.group]]
+title = "Guides"
+pages = ["docs/guides/*.md"]
+```
+
+A group names its documents by `src`, or by a pattern with a `*` for the files of 1 directory, which
+the group orders by weight and title. The label of a page in the menu is its `nav-title`, or its
+title. A name that matches no page of the section stops the build.
+
 ## Linking to a document of another site tree
 
 A document that another repository holds is linked by the address it has there, so that the link
