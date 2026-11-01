@@ -60,6 +60,28 @@ that does not exist is left as written, and the check reports it.
 The body of a page starts with its title and its first paragraph, as the document does on GitHub, so
 a template does not write them again.
 
+## Leaving files out of an asset directory
+
+An asset directory is copied as it is, so a draft or a file of work in it would be published.
+`exclude` lists the patterns of what to leave out, written like the lines of a `.gitignore` file.
+
+| Pattern     | Leaves out                                                                       |
+| ----------- | -------------------------------------------------------------------------------- |
+| `*.dot`     | the files and directories of that name, at any depth                             |
+| `draft/`    | the directories of that name, at any depth, and what they hold                   |
+| `raw/*.png` | the paths from the root of the asset directory, when the pattern holds a slash   |
+| `**/old-*`  | the same, with `**` for any number of directories, none included                 |
+
+`*` stands for any run of characters and `?` for 1 character, neither of them a slash. A link to a
+file that an asset directory leaves out is refused by the check as `link-unserved`.
+
+```
+[[asset]]
+src = "docs/img"
+url = "/img"
+exclude = ["*.psd", "draft/"]
+```
+
 ## The properties file
 
 It is a TOML file.
@@ -71,7 +93,7 @@ It is a TOML file.
 | `[home]`      | the page at the root: its `template`, and a `src` document that the template shows                                 |
 | `[[section]]` | a group of pages with an index of its own: `name`, `url`, `title`, `description`, `template`, `sidebar`            |
 | `[[page]]`    | documents to serve: a `src` with its `url` and `title`, or a `glob` such as `docs/guides/*.md`, and their `format` |
-| `[[asset]]`   | a directory of files the pages point at: `src`, and the `url` it is served at                                      |
+| `[[asset]]`   | a directory of files the pages point at: `src`, the `url` it is served at, and `exclude`, the patterns it leaves out |
 | `[figures]`   | where a figure given by name is found: `src` and `dark`, with `{name}` replaced                                    |
 | `[colors]`    | `light` and `dark`, tables of colours that replace those of the theme                                              |
 | `[lint]`      | `disable` and `enable`, lists of rules for the check that runs first                                               |

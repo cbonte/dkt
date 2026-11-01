@@ -22,15 +22,26 @@ pub fn normalize(path: &str) -> Option<String> {
 pub struct LinkMap {
     root: PathBuf,
     served: HashMap<String, String>,
-    assets: Vec<(String, String)>,
+    assets: Vec<Served>,
+}
+
+/// An asset directory: where it is in the tree, where it is served and what it leaves out.
+pub struct Served {
+    pub src: String,
+    pub url: String,
+    pub exclude: Vec<String>,
+}
+
+impl Served {
+    /// The path inside the directory, when `rel` is a file that the directory serves.
+    fn serves<'a>(&self, rel: &'a str) -> Option<&'a str> {
+        let inside = rel.strip_prefix(&format!("{}/", self.src))?;
+        (!crate::site::exclude::is_excluded(&self.exclude, inside)).then_some(inside)
+    }
 }
 
 impl LinkMap {
-    pub fn new(
-        root: &Path,
-        served: HashMap<String, String>,
-        assets: Vec<(String, String)>,
-    ) -> LinkMap {
+    pub fn new(root: &Path, served: HashMap<String, String>, assets: Vec<Served>) -> LinkMap {
         LinkMap {
             root: root.to_path_buf(),
             served,
@@ -66,9 +77,9 @@ impl LinkMap {
         if let Some(url) = self.served.get(&rel) {
             return Some(format!("{url}{frag}"));
         }
-        for (src, url) in &self.assets {
-            if let Some(rest) = rel.strip_prefix(&format!("{src}/")) {
-                return Some(format!("{}/{rest}{frag}", url.trim_end_matches('/')));
+        for asset in &self.assets {
+            if let Some(rest) = asset.serves(&rel) {
+                return Some(format!("{}/{rest}{frag}", asset.url.trim_end_matches('/')));
             }
         }
         None
@@ -78,12 +89,7 @@ impl LinkMap {
     /// holds it, so that a link to it would leave the site.
     pub fn unserved(&self, from: &str, target: &str) -> Option<String> {
         let (rel, _) = self.locate(from, target)?;
-        if self.served.contains_key(&rel)
-            || self
-                .assets
-                .iter()
-                .any(|(src, _)| rel.starts_with(&format!("{src}/")))
-        {
+        if self.served.contains_key(&rel) || self.assets.iter().any(|a| a.serves(&rel).is_some()) {
             return None;
         }
         self.root.join(&rel).exists().then_some(rel)
@@ -104,7 +110,11 @@ mod tests {
         LinkMap::new(
             Path::new("/nonexistent"),
             served,
-            vec![("docs/img".to_string(), "/s/img".to_string())],
+            vec![Served {
+                src: "docs/img".to_string(),
+                url: "/s/img".to_string(),
+                exclude: Vec::new(),
+            }],
         )
     }
 
@@ -156,7 +166,18 @@ mod tests {
         let m = LinkMap::new(
             &dir,
             served,
-            vec![("img".to_string(), "/s/img".to_string())],
+            vec![Served {
+                src: "img".to_string(),
+                url: "/s/img".to_string(),
+                exclude: vec!["*.tmp".to_string()],
+            }],
+        );
+        std::fs::create_dir_all(dir.join("img")).unwrap();
+        std::fs::write(dir.join("img/a.tmp"), "").unwrap();
+        assert_eq!(
+            m.unserved("docs/a.md", "../img/a.tmp").as_deref(),
+            Some("img/a.tmp"),
+            "a file the directory leaves out is not served"
         );
         assert_eq!(
             m.unserved("docs/a.md", "../src/main.rs#L3").as_deref(),

@@ -160,6 +160,10 @@ pub struct Asset {
     pub src: String,
     /// Address inside the site where its files are served.
     pub url: String,
+    /// Patterns of the files and directories that stay out of the site, written like the lines of a
+    /// `.gitignore` file.
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]

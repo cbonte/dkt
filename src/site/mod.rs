@@ -5,7 +5,8 @@
 //! between pages, and the check of `dkt lint` runs before anything is written.
 
 pub mod config;
-pub mod links;
+pub mod exclude;
+mod links;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
@@ -22,7 +23,7 @@ use crate::cmd::lint::rules;
 use crate::page::{self, Hooks, Page};
 use crate::parallel;
 use config::Config;
-use links::{LinkMap, normalize};
+use links::{LinkMap, Served, normalize};
 
 /// File that marks a directory this module wrote, so that a build only clears its own output.
 const MARKER: &str = ".dkt-site";
@@ -488,6 +489,35 @@ fn write_file(path: &Path, text: &str) -> Result<()> {
     std::fs::write(path, text).with_context(|| format!("cannot write {}", path.display()))
 }
 
+/// Copies the files of `from` that none of the patterns leaves out.
+fn copy_dir_excluding(from: &Path, to: &Path, exclude: &[String]) -> Result<()> {
+    fn walk(from: &Path, to: &Path, rel: &str, exclude: &[String]) -> Result<()> {
+        fs::create_dir_all(to)?;
+        for entry in
+            fs::read_dir(from).with_context(|| format!("cannot read {}", from.display()))?
+        {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let path = if rel.is_empty() {
+                name.clone()
+            } else {
+                format!("{rel}/{name}")
+            };
+            let is_dir = entry.file_type()?.is_dir();
+            if exclude::matches_any(exclude, &path, is_dir) {
+                continue;
+            }
+            if is_dir {
+                walk(&entry.path(), &to.join(&name), &path, exclude)?;
+            } else {
+                fs::copy(entry.path(), to.join(&name))?;
+            }
+        }
+        Ok(())
+    }
+    walk(from, to, "", exclude)
+}
+
 fn copy_dir(from: &Path, to: &Path) -> Result<()> {
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from).with_context(|| format!("cannot read {}", from.display()))? {
@@ -678,14 +708,13 @@ pub fn build(opts: &Options) -> Result<Report> {
         .iter()
         .filter_map(|(src, url)| Some((normalize(src)?, url.clone())))
         .collect();
-    let assets: Vec<(String, String)> = cfg
+    let assets: Vec<Served> = cfg
         .asset
         .iter()
-        .map(|a| {
-            (
-                a.src.trim_matches('/').to_string(),
-                format!("{base}{}", a.url),
-            )
+        .map(|a| Served {
+            src: a.src.trim_matches('/').to_string(),
+            url: format!("{base}{}", a.url),
+            exclude: a.exclude.clone(),
         })
         .collect();
     let links = LinkMap::new(&root, served, assets);
@@ -934,7 +963,7 @@ pub fn build(opts: &Options) -> Result<Report> {
         }
         for asset in &cfg.asset {
             let to = asset.url.trim_matches('/');
-            copy_dir(&root.join(&asset.src), &opts.out.join(to))?;
+            copy_dir_excluding(&root.join(&asset.src), &opts.out.join(to), &asset.exclude)?;
         }
     }
     if cfg.site.search {

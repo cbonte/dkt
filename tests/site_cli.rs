@@ -810,3 +810,42 @@ fn the_repository_options_of_an_earlier_version_are_refused() {
     );
     assert!(err.contains("[data]"), "{err}");
 }
+
+#[test]
+fn an_asset_directory_leaves_out_what_its_patterns_name_at_any_depth() {
+    let dir = TempDir::new("exclude");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\n\n[[page]]\nsrc = \"a.md\"\n\n[[asset]]\nsrc = \"img\"\nurl = \"/img/\"\nexclude = [\"*.psd\", \"raw/\", \"**/old-*\"]\n",
+    );
+    dir.file("templates/page.html", "{{ page.content }}");
+    dir.file("a.md", "# A\n\ntext ![a](img/a.png)\n");
+    for file in [
+        "img/a.png",
+        "img/x.psd",
+        "img/sub/y.psd",
+        "img/raw/z.png",
+        "img/deep/old-1.png",
+        "img/deep/ok.png",
+    ] {
+        dir.file(file, "x");
+    }
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    for kept in ["img/a.png", "img/deep/ok.png"] {
+        assert!(dir.exists(&format!("public/{kept}")), "{kept}");
+    }
+    for left_out in [
+        "img/x.psd",
+        "img/sub/y.psd",
+        "img/raw/z.png",
+        "img/deep/old-1.png",
+    ] {
+        assert!(!dir.exists(&format!("public/{left_out}")), "{left_out}");
+    }
+
+    dir.file("a.md", "# A\n\n![a](img/sub/y.psd)\n");
+    let out = build(&dir, &[]);
+    assert!(!out.status.success());
+    assert!(stderr(&out).contains("img/sub/y.psd"), "{}", stderr(&out));
+}
