@@ -251,30 +251,21 @@ struct Entry {
 
 /// The file that tells a page of progress what each page holds that a reader can finish. It is
 /// not written for a site that has nothing of the kind.
+///
+/// A build of a part of the site gives `order`, the addresses of the pages of the site in their
+/// order. It keeps what the file says of the pages it did not build, and drops what it says of a
+/// page that is not in `order`.
 fn write_widgets(
     out: &Path,
     links: &[PageLink],
     pages: &[Searchable],
-    kept: Option<(&HashSet<String>, &[String])>,
+    order: Option<&[String]>,
 ) -> Result<()> {
+    let mut built: HashMap<&str, String> = HashMap::new();
     let mut entries: Vec<String> = Vec::new();
-    // A build of a part of the site keeps what the file says of the pages it did not build: the
-    // pages it built, and the ones under the address of a section it built, are written again.
-    if let Some((built, rebuilt)) = kept
-        && let Ok(existing) = fs::read_to_string(out.join("widgets.json"))
-    {
-        for object in crate::search::objects(&existing) {
-            let url = object
-                .find("\"u\":\"")
-                .and_then(|at| object[at + 5..].split('"').next())
-                .unwrap_or_default();
-            if !built.contains(url) && !rebuilt.iter().any(|prefix| url.starts_with(prefix)) {
-                entries.push(object.to_string());
-            }
-        }
-    }
     for (link, page) in links.iter().zip(pages) {
         if page.widgets.is_empty() {
+            built.insert(&link.url, String::new());
             continue;
         }
         let mut json = String::from("{\"u\":");
@@ -293,7 +284,35 @@ fn write_widgets(
             json.push_str(&format!(",\"n\":{}}}", widget.total));
         }
         json.push_str("]}");
-        entries.push(json);
+        match order {
+            Some(_) => {
+                built.insert(&link.url, json);
+            }
+            None => entries.push(json),
+        }
+    }
+    if let Some(order) = order {
+        let existing = fs::read_to_string(out.join("widgets.json")).unwrap_or_default();
+        let mut kept: HashMap<&str, Vec<&str>> = HashMap::new();
+        for object in crate::search::objects(&existing) {
+            let url = object
+                .find("\"u\":\"")
+                .and_then(|at| object[at + 5..].split('"').next())
+                .unwrap_or_default();
+            kept.entry(url).or_default().push(object);
+        }
+        for url in order {
+            match built.get(url.as_str()) {
+                Some(json) if !json.is_empty() => entries.push(json.clone()),
+                Some(_) => {}
+                None => entries.extend(
+                    kept.get(url.as_str())
+                        .into_iter()
+                        .flatten()
+                        .map(|o| o.to_string()),
+                ),
+            }
+        }
     }
     let to = out.join("widgets.json");
     if entries.is_empty() {
@@ -1075,6 +1094,9 @@ pub fn build(opts: &Options) -> Result<Report> {
             copy_dir_excluding(&root.join(&asset.src), &opts.out.join(to), &asset.exclude)?;
         }
     }
+    // The addresses of the pages of the site in the order of the properties, which a partial build
+    // gives its index and its file of widgets.
+    let order: Vec<String> = served_entries.iter().map(|(_, url)| url.clone()).collect();
     if cfg.site.search {
         // A page of a section is told from the same page of another section by the title of the
         // section, as in `Configuration Manual - HAProxy 3.4`.
@@ -1106,21 +1128,14 @@ pub fn build(opts: &Options) -> Result<Report> {
             // A partial build keeps what the index says of the pages it did not build.
             Ok(existing) if scope.partial() => {
                 let built: HashSet<String> = links_of_pages.iter().map(|l| l.url.clone()).collect();
-                crate::search::merge(&existing, &built, &index)
+                crate::search::merge(&existing, &order, &built, &index)
             }
             _ => crate::search::to_json(&index),
         };
         fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
     }
     if scope.partial() {
-        let built: HashSet<String> = links_of_pages.iter().map(|l| l.url.clone()).collect();
-        let rebuilt: Vec<String> = cfg
-            .section
-            .iter()
-            .filter(|s| scope.builds_section(&s.name))
-            .map(|s| site.sections[&s.name].url.clone())
-            .collect();
-        write_widgets(&opts.out, &links_of_pages, &pages, Some((&built, &rebuilt)))?;
+        write_widgets(&opts.out, &links_of_pages, &pages, Some(&order))?;
     } else {
         write_widgets(&opts.out, &links_of_pages, &pages, None)?;
     }

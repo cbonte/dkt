@@ -28,6 +28,7 @@
 ## Fixed
 
 - site: keep the widgets file of the pages a partial build does not build.
+- site: give the index and the widgets file of a partial build the order of a full build.
 
 # 0.2.0 - 2026-10-31
 

@@ -3,7 +3,7 @@
 //! The index is one JSON file at the root of the site. A theme reads it in the browser and matches
 //! what the reader types against the titles.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::page::{Alias, Heading};
 
@@ -174,44 +174,46 @@ pub fn objects(existing: &str) -> Vec<&str> {
     kept
 }
 
-/// The index of a partial build: what the existing index holds for the pages that were not built,
-/// then the new entries. The existing index is read as the objects it is made of, and a page is
-/// told by the address before the anchor of an entry.
-pub fn merge(existing: &str, built: &HashSet<String>, new: &[Entry]) -> String {
-    let kept = objects(existing);
+/// The address of the page of an entry: its address before the anchor.
+fn page_of(url: &str) -> &str {
+    url.split('#').next().unwrap_or_default()
+}
+
+/// The index of a partial build, in the order of the pages of the site as a full build writes it.
+///
+/// A page that was built gets its new entries.
+/// A page that was not built keeps what the existing index holds for it.
+/// An entry whose page is not in `order` is dropped.
+/// The existing index is read as the objects it is made of, and a page is told by the address
+/// before the anchor of an entry.
+pub fn merge(existing: &str, order: &[String], built: &HashSet<String>, new: &[Entry]) -> String {
     let url_of = |object: &str| -> Option<String> {
         let after = &object[object.find(",\"u\":\"")? + 6..];
         let end = after.find('"')?;
-        Some(
-            after[..end]
-                .split('#')
-                .next()
-                .unwrap_or_default()
-                .to_string(),
-        )
+        Some(page_of(&after[..end]).to_string())
     };
-    let mut out = String::from("[");
-    let mut first = true;
-    for object in kept {
-        if url_of(object).is_some_and(|u| built.contains(&u)) {
-            continue;
+    let mut kept: HashMap<String, Vec<&str>> = HashMap::new();
+    for object in objects(existing) {
+        if let Some(url) = url_of(object) {
+            kept.entry(url).or_default().push(object);
         }
-        if !first {
-            out.push(',');
-        }
-        first = false;
-        out.push_str(object);
     }
-    let added = to_json(new);
-    let inner = added.trim_start_matches('[').trim_end_matches(']');
-    if !inner.is_empty() {
-        if !first {
-            out.push(',');
-        }
-        out.push_str(inner);
+    let mut added: HashMap<&str, Vec<&Entry>> = HashMap::new();
+    for entry in new {
+        added.entry(page_of(&entry.url)).or_default().push(entry);
     }
-    out.push(']');
-    out
+    let mut parts: Vec<String> = Vec::new();
+    for url in order {
+        if built.contains(url) {
+            for entry in added.get(url.as_str()).into_iter().flatten() {
+                let json = to_json(std::slice::from_ref(*entry));
+                parts.push(json[1..json.len() - 1].to_string());
+            }
+        } else {
+            parts.extend(kept.get(url).into_iter().flatten().map(|o| o.to_string()));
+        }
+    }
+    format!("[{}]", parts.join(","))
 }
 
 #[cfg(test)]
@@ -247,12 +249,19 @@ mod tests {
             level: 1,
             ..Entry::default()
         }];
-        let merged = merge(old, &built, &new);
+        let order = ["/a/".to_string(), "/b/".to_string()];
+        let merged = merge(old, &order, &built, &new);
         assert_eq!(
             merged,
-            "[{\"t\":\"B\",\"p\":\"B\",\"u\":\"/b/\",\"l\":1},{\"t\":\"New\",\"p\":\"New\",\"u\":\"/a/\",\"l\":1}]"
+            "[{\"t\":\"New\",\"p\":\"New\",\"u\":\"/a/\",\"l\":1},{\"t\":\"B\",\"p\":\"B\",\"u\":\"/b/\",\"l\":1}]"
         );
-        assert_eq!(merge("", &built, &[]), "[]");
+        assert_eq!(merge("", &order, &built, &[]), "[]");
+        // A page that the site no longer serves loses its entries.
+        let order = ["/a/".to_string()];
+        assert_eq!(
+            merge(old, &order, &built, &new),
+            "[{\"t\":\"New\",\"p\":\"New\",\"u\":\"/a/\",\"l\":1}]"
+        );
     }
 
     #[test]
