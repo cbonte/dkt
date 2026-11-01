@@ -1,7 +1,7 @@
 [package]
 name = "dkt"
 description = "Doc Kit: render, format, lint and publish Markdown, reStructuredText and HAProxy documentation, in the terminal, as HTML and as static sites"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/cbonte/dkt"
