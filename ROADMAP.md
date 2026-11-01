@@ -12,7 +12,7 @@ Build sites with menu groups and links between trees, draw diagrams as vector fi
 | `html` | Draw Mermaid diagrams as vector figures that fit the column, tinted by role with custom properties a theme may set. | 1 | Done |
 | `cat` | Draw Mermaid diagrams with fewer crossings, joined edges and colours by role. | 1 | Done |
 | `replay` | Play a full screen session as a series of SVG snapshots, 1 per step. | 1 | Done |
-| `site` | Serve several versions of the documentation, with a selector of versions. | 1 | Planned |
+| `site` | Serve several versions of the documentation, with a selector of versions. | 1 | Done |
 | `site` | Build a table from a JSON or a YAML file with `table src`. | 1 | Done |
 
 ## 0.4.0 More diagrams, more formats
