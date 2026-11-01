@@ -214,6 +214,31 @@ in the address, so a link can point to a filtered table.
 
 <!-- site: end -->
 
+With `src`, the table comes from a file.
+This one reads a JSON file, a list of objects whose keys give the headings.
+
+<!-- site: widget table id=from-json src=../tests/fixtures/widgets/widgets.json -->
+
+The site builds this table from `widgets.json`.
+
+<!-- site: end -->
+
+A YAML file can hold a list of rows, the first one giving the headings, and `columns` keeps some of them.
+
+<!-- site: widget table id=from-yaml src=../tests/fixtures/widgets/formats.yaml columns="Format,Commands" -->
+
+The site builds this table from `formats.yaml`.
+
+<!-- site: end -->
+
+```
+<!-- site: widget table id=from-json src=widgets.json -->
+<!-- site: end -->
+
+<!-- site: widget table id=from-yaml src=formats.yaml columns="Format,Commands" -->
+<!-- site: end -->
+```
+
 ## Compare
 
 2 pictures with a slider between them. The text of the figure, or else the alternative text, names
@@ -346,6 +371,23 @@ Doc Kit (dk:t) is a set of tools for documents.
 ```
 
 <!-- site: end -->
+
+A recording of a program that takes the whole screen plays as a series of pictures of the screen, 1 per step.
+This one is a process monitor, recorded by hand for the tests.
+It opens a dialog, removes a row and gets a wider window.
+
+<!-- site: widget replay id=monitor src=../tests/fixtures/widgets/monitor.cast -->
+
+```
+$ monitor
+```
+
+<!-- site: end -->
+
+```
+<!-- site: widget replay id=monitor src=monitor.cast -->
+<!-- site: end -->
+```
 
 ## Since a version
 

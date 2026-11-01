@@ -31,7 +31,7 @@ struct State {
 }
 
 /// The colour of one of the 256 colours of a terminal, when it is not one of the first 16.
-fn palette(n: u8) -> (u8, u8, u8) {
+pub(crate) fn palette(n: u8) -> (u8, u8, u8) {
     if n >= 232 {
         let level = 8 + (n - 232) * 10;
         return (level, level, level);

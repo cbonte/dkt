@@ -1,0 +1,7 @@
+# The formats that dkt reads, as rows whose first one gives the headings.
+title: Formats
+formats:
+  - [Format, Extension, Commands]
+  - [Markdown, .md, every command]
+  - [reStructuredText, .rst, "cat, convert, html and site"]
+  - [HAProxy documentation, ~, "cat, convert, html and site"]

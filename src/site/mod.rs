@@ -6,8 +6,9 @@
 
 pub mod config;
 pub mod exclude;
-mod fromfile;
+pub(crate) mod fromfile;
 mod links;
+mod snapshots;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;

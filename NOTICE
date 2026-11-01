@@ -12,6 +12,7 @@ Third-party software linked into the dkt binary. Each crate keeps its own licenc
 | anstyle-parse         | MIT or Apache-2.0                                   |
 | anstyle-query         | MIT or Apache-2.0                                   |
 | anyhow                | MIT or Apache-2.0                                   |
+| arraydeque            | MIT or Apache-2.0                                   |
 | bincode               | MIT                                                 |
 | bit-set               | Apache-2.0 or MIT                                   |
 | bit-vec               | Apache-2.0 or MIT                                   |
@@ -27,7 +28,11 @@ Third-party software linked into the dkt binary. Each crate keeps its own licenc
 | fancy-regex           | MIT                                                 |
 | flate2                | MIT or Apache-2.0                                   |
 | fnv                   | Apache-2.0 or MIT                                   |
+| foldhash              | Zlib                                                |
+| hashbrown             | MIT or Apache-2.0                                   |
+| hashlink              | MIT or Apache-2.0                                   |
 | is_terminal_polyfill  | MIT or Apache-2.0                                   |
+| itoa                  | MIT or Apache-2.0                                   |
 | linux-raw-sys         | Apache-2.0 WITH LLVM-exception or Apache-2.0 or MIT |
 | memchr                | Unlicense or MIT                                    |
 | memo-map              | Apache-2.0                                          |
@@ -43,6 +48,7 @@ Third-party software linked into the dkt binary. Each crate keeps its own licenc
 | same-file             | Unlicense or MIT                                    |
 | serde                 | MIT or Apache-2.0                                   |
 | serde_core            | MIT or Apache-2.0                                   |
+| serde_json            | MIT or Apache-2.0                                   |
 | serde_spanned         | MIT or Apache-2.0                                   |
 | simd-adler32          | MIT                                                 |
 | strsim                | MIT                                                 |
@@ -58,6 +64,8 @@ Third-party software linked into the dkt binary. Each crate keeps its own licenc
 | utf8parse             | Apache-2.0 or MIT                                   |
 | walkdir               | Unlicense or MIT                                    |
 | winnow                | MIT                                                 |
+| yaml-rust2            | MIT or Apache-2.0                                   |
+| zmij                  | MIT                                                 |
 
 The complete list, with versions, comes from Cargo.lock.
 

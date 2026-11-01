@@ -9,6 +9,9 @@
 - site: split the menu of a section into titled groups with [[section.group]].
 - table: build the table from a file of values with src.
 - replay: read the session from a recorded file with src.
+- table: build the table from a JSON or a YAML file with src.
+- replay: play a full screen session as a series of SVG snapshots, 1 per step.
+- lint: check the file that a table or a replay names, as the site reads it.
 - site: serve a link to a document of another tree by its address, with [[mirror]].
 - html: draw Mermaid diagrams as vector figures that fit the column, with subgraphs and blocks.
 - html: tint the parts of a diagram by role, with custom properties a theme may set.

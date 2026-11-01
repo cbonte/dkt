@@ -893,3 +893,81 @@ fn a_partial_build_keeps_the_widgets_of_the_other_pages_and_replaces_its_own() {
     assert!(second.contains("b-first"), "{second}");
     assert!(!second.contains("b-changed-but-not-built"), "{second}");
 }
+
+/// A file of the widget fixtures.
+fn fixture(name: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/widgets")
+        .join(name);
+    std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("no fixture {name}"))
+}
+
+#[test]
+fn a_table_reads_a_json_or_a_yaml_file_and_a_full_screen_session_is_a_series_of_snapshots() {
+    let dir = TempDir::new("from-files");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"docs\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    for name in ["widgets.json", "formats.yaml", "monitor.cast"] {
+        dir.file(&format!("files/{name}"), &fixture(name));
+    }
+    dir.file(
+        "a.md",
+        "# A\n\n<!-- site: widget table src=files/widgets.json -->\n<!-- site: end -->\n\n\
+         <!-- site: widget table src=files/formats.yaml columns=\"Format,Commands\" -->\n<!-- site: end -->\n\n\
+         <!-- site: widget replay src=files/monitor.cast -->\n```\n$ monitor\n```\n<!-- site: end -->\n",
+    );
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let page = dir.read("public/a/index.html");
+    // The keys of the objects give the headings, in the order they first appear.
+    assert!(
+        page.contains("<th>widget</th><th>options</th><th>remembered</th><th>since</th>"),
+        "{page}"
+    );
+    assert!(
+        page.contains("<td>replay</td><td>speed, src</td><td></td><td>0.2</td>"),
+        "{page}"
+    );
+    assert!(page.contains("<th>Format</th><th>Commands</th>"), "{page}");
+    assert!(page.contains("<td>HAProxy documentation</td>"), "{page}");
+    // The session draws each step of the screen, and the rows it repeats are drawn once.
+    let steps = page.matches("<svg class=\"dkt-snap\"").count();
+    assert!((10..=30).contains(&steps), "{steps} steps");
+    // The title row is drawn once for each width of the screen.
+    assert_eq!(
+        page.matches(">monitor\u{a0}1.0</text>").count(),
+        2,
+        "{page}"
+    );
+    assert!(page.contains("┌──"), "the line drawing set: {page}");
+    assert!(page.contains("日本語-sync"), "{page}");
+    assert!(
+        page.contains("viewBox=\"-6 -6 444 204\""),
+        "the screen after the resize"
+    );
+    assert!(
+        !page.contains("$ monitor\n</code>"),
+        "the code block is replaced"
+    );
+}
+
+#[test]
+fn a_table_file_that_holds_no_table_stops_the_build() {
+    let dir = TempDir::new("bad-table");
+    dir.file(
+        "dkt.toml",
+        "[site]\ntitle = \"T\"\ntheme = \"docs\"\n\n[[page]]\nsrc = \"a.md\"\n",
+    );
+    dir.file("t.json", "[{\"a\": {\"b\": 1}}]");
+    dir.file(
+        "a.md",
+        "# A\n\n<!-- site: widget table src=t.json -->\n<!-- site: end -->\n",
+    );
+    let out = build(&dir, &[]);
+    assert!(!out.status.success());
+    let err = stderr(&out);
+    assert!(err.contains("cannot read the table t.json"), "{err}");
+    assert!(err.contains("the cell 'a' of item 1"), "{err}");
+}

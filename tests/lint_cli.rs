@@ -160,3 +160,37 @@ fn stdin_is_checked_and_rules_can_be_listed() {
     assert!(out.contains("link-file\ton"), "{out}");
     assert!(out.contains("line-length\toff"), "{out}");
 }
+
+#[test]
+fn the_files_of_a_table_and_of_a_replay_are_checked() {
+    let dir = TempDir::new("widget-files");
+    dir.file("ok.yaml", "- {a: 1}\n");
+    dir.file("bad.json", "[{\"a\": 1,}]");
+    dir.file(
+        "big.cast",
+        "{\"version\": 2, \"width\": 999, \"height\": 24}\n[0, \"o\", \"\\u001b[2J\"]\n",
+    );
+    dir.file(
+        "w.md",
+        "# W\n\n<!-- site: widget table src=ok.yaml -->\n<!-- site: end -->\n\n\
+         <!-- site: widget table src=gone.csv -->\n<!-- site: end -->\n\n\
+         <!-- site: widget table src=bad.json -->\n<!-- site: end -->\n\n\
+         <!-- site: widget replay src=big.cast -->\n<!-- site: end -->\n",
+    );
+    let o = run_in(&dir.0, &["w.md"], "");
+    assert!(!o.status.success());
+    let out = stdout(&o);
+    let lines: Vec<&str> = out.lines().collect();
+    assert_eq!(lines.len(), 3, "{out}");
+    assert_eq!(lines[0], "w.md:6:1: link-file: gone.csv does not exist");
+    assert!(
+        lines[1].starts_with("w.md:9:1: site-annotation: the table cannot read bad.json: trailing comma at line 1 column"),
+        "{out}"
+    );
+    assert!(
+        lines[2].starts_with(
+            "w.md:12:1: site-annotation: the replay cannot read big.cast: the screen of 999 by 24"
+        ),
+        "{out}"
+    );
+}

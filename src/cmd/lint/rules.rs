@@ -498,6 +498,36 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
     }
 }
 
+/// Checks the files that the `table` and the `replay` widgets name: each one exists, and reads
+/// as the site would read it.
+fn check_widget_files(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Finding>) {
+    let dir = src.path.parent().unwrap_or(Path::new("."));
+    for (event, range) in Parser::new_ext(src.text, parser_options()).into_offset_iter() {
+        let Event::Html(html) = event else { continue };
+        let Some((widget, file, columns)) = crate::site::fromfile::file_widget(&html) else {
+            continue;
+        };
+        let path = dir.join(&file);
+        if !path.exists() {
+            if enabled.contains(&Rule::LinkFile) {
+                out.push(src.finding(
+                    range.start,
+                    Rule::LinkFile,
+                    format!("{file} does not exist"),
+                ));
+            }
+        } else if enabled.contains(&Rule::SiteAnnotation)
+            && let Err(why) = crate::site::fromfile::check(widget, &path, columns.as_deref())
+        {
+            out.push(src.finding(
+                range.start,
+                Rule::SiteAnnotation,
+                format!("the {widget} cannot read {file}: {why:#}"),
+            ));
+        }
+    }
+}
+
 /// The widgets that a `tabs` widget may hold, 1 level deep.
 const NESTED_IN_TABS: [&str; 2] = ["steps", "checklist"];
 
@@ -578,6 +608,7 @@ pub fn check(path: &Path, text: &str, enabled: &HashSet<Rule>, line_length: usiz
     if enabled.contains(&Rule::SiteAnnotation) {
         check_annotations(&src, &mut out);
     }
+    check_widget_files(&src, enabled, &mut out);
     check_lines(&src, enabled, line_length, &mut out);
     out.sort_by_key(|f| (f.line, f.column, f.rule));
     out

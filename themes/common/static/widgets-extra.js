@@ -592,8 +592,90 @@
     return true;
   }
 
+  // A full screen session played back: its snapshots are shown one after the other, each after
+  // the pause that its `data-ms` gives.
+  function snapshots(root, box) {
+    var frames = all(box, "svg.dkt-snap");
+    if (!frames.length) return false;
+    var speed = parseFloat(root.getAttribute("data-speed")) || 1;
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var timer = null;
+    var at = 0;
+    var running = false;
+    var finished = false;
+    var play = dkt.button("Play", function () {
+      if (finished) restart();
+      else toggle();
+    });
+    var again = dkt.button("Restart", function () {
+      restart();
+    });
+    var bar = make("div", "dkt-controls");
+    bar.appendChild(play);
+    bar.appendChild(again);
+    function label() {
+      play.textContent = finished ? "Replay" : running ? "Pause" : "Play";
+    }
+    function show(n) {
+      frames.forEach(function (frame, i) {
+        frame.classList.toggle("dkt-on", i === n);
+      });
+    }
+    function stop() {
+      running = false;
+      clearTimeout(timer);
+      label();
+    }
+    function step() {
+      if (!running) return;
+      show(at);
+      at++;
+      if (at >= frames.length) {
+        finished = true;
+        stop();
+        return;
+      }
+      var pause = parseInt(frames[at].getAttribute("data-ms"), 10) || 0;
+      timer = setTimeout(step, pause / speed);
+    }
+    function toggle() {
+      if (running) return stop();
+      running = true;
+      label();
+      step();
+    }
+    function restart() {
+      stop();
+      at = 0;
+      finished = false;
+      toggle();
+    }
+    box.classList.add("dkt-live");
+    root.appendChild(bar);
+    show(0);
+    label();
+    if (reduced) {
+      at = frames.length;
+      finished = true;
+      show(frames.length - 1);
+      label();
+    } else if ("IntersectionObserver" in window) {
+      var seen = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting && !finished && !running && at === 0) {
+          seen.disconnect();
+          toggle();
+        }
+      });
+      seen.observe(box);
+    }
+    return true;
+  }
+
   // A terminal session played back: the lines that start with `$ ` are typed, the others appear.
+  // A full screen session is a series of snapshots instead.
   function replay(root, id) {
+    var box = root.querySelector(".dkt-snaps");
+    if (box) return snapshots(root, box);
     var model = root.querySelector("pre code");
     if (!model) return false;
     var script = model.textContent.replace(/\n$/, "").split("\n");

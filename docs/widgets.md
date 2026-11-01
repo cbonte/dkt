@@ -200,13 +200,29 @@ A Markdown table, which gets a filter and headings that sort.
 
 | Option    | Value                | Effect                                                         |
 | --------- | -------------------- | -------------------------------------------------------------- |
-| `src`     | a path               | a file of values that gives the table                          |
+| `src`     | a path               | a file of values, JSON or YAML that gives the table            |
 | `columns` | headings, with commas | the columns to keep, in that order, with `src`                |
 
-With `src`, the site builds the table from a file written relative to the document, and it takes the
-place of the blocks the widget holds. The file is separated by tabs, or by commas when its name ends
-in `.csv`, and its first row gives the headings. The file is the one a test of the project writes, so
-that the table follows the code. A missing file or a missing column stops the build.
+With `src`, the site builds the table from a file written relative to the document, and it takes the place of the blocks the widget holds.
+The extension of the file gives its format.
+
+| Extension         | Format                     | Headings                                  |
+| ----------------- | -------------------------- | ----------------------------------------- |
+| `.csv`            | values separated by commas | the first row                             |
+| `.json`           | JSON                       | the keys of the objects, or the first row |
+| `.yaml` or `.yml` | YAML                       | the keys of the objects, or the first row |
+| any other         | values separated by tabs   | the first row                             |
+
+A JSON or a YAML file holds a list of objects or a list of rows.
+The keys of the objects give the headings, in the order they first appear.
+A key that an object lacks gives an empty cell.
+In a list of rows, the first row gives the headings.
+A file whose top is an object stands for the only list that the object holds, and an object with several lists is refused.
+A text, a number or a boolean gives its cell, and null gives an empty cell.
+A cell that holds a list or an object stops the build, and the error names the item and the key that hold it.
+
+The file is the one a test of the project writes, so that the table follows the code.
+A missing file, a missing column and a file that does not read stop the build, and an error in the file gives its line and its column.
 
 The filter keeps the rows that hold every word typed, whatever the case. The count says `n of N`,
 and the filter is written in the address as `?filter-ID=words`, so a link can open a filtered table.
@@ -340,10 +356,31 @@ after the other, and the other lines appear one after the other. The session sta
 into view, and `Pause`, `Restart` and `Replay` are its buttons. A reader whose system asks for less
 motion gets the whole session at once.
 
-With `src`, the site builds the session from a file written relative to the document, and it takes
-the place of the code block the widget holds. The file is plain text, or a recording of version 2
-of asciinema. A recording gives its output without the escape sequences and without its timing.
-A file that cannot be read stops the build.
+With `src`, the site builds the session from a file written relative to the document, and it takes the place of the code block the widget holds.
+The file is plain text, or a recording of version 2 of asciinema.
+A recording that keeps to the lines of a shell gives its output without the escape sequences and without its timing.
+A file that cannot be read stops the build, and an error in a recording gives its line.
+
+### A full screen session
+
+A recording that takes the whole screen, as a program built on curses does, becomes a series of pictures of the screen.
+A recording takes the whole screen when it places the cursor, clears the screen or shows the alternate screen.
+Each picture is a step.
+The events less than 50 milliseconds apart make 1 step, and a step that changes nothing on the screen is left out.
+
+The steps follow each other at the pace of the recording, and `speed` sets how fast.
+A pause is cut to the `idle_time_limit` of the recording, or to 2 seconds when the recording sets none.
+`Pause`, `Restart` and `Replay` are the buttons, as for a session of lines.
+Without the script, and for a reader whose system asks for less motion, the last picture stays on show.
+
+A picture keeps the colours of the text and of its ground, bold, dim, italic, underlined and struck text, the wide characters and the lines of the line drawing set.
+A new size of the screen in the recording gives the next pictures that size.
+The pictures are drawn on the dark ground of a terminal, as an `ansi` block is.
+Their 16 colours come from the variables `--a0` to `--a15`, with a fallback for each, so a theme that sets them sets both.
+
+A row is drawn once, and the pictures that show it again use it, which keeps the page light.
+A session holds at most 200 steps, on a screen of at most 300 columns by 100 rows.
+A longer session or a larger screen stops the build, and the recording has to be cut.
 
 ## Since
 

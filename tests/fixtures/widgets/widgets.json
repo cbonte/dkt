@@ -1,0 +1,8 @@
+[
+  { "widget": "tabs", "options": "group", "remembered": true },
+  { "widget": "checklist", "remembered": true },
+  { "widget": "quiz", "options": "answer", "remembered": true },
+  { "widget": "carousel", "options": "show, autoplay, loop, zoom", "remembered": false },
+  { "widget": "chart", "options": "type", "remembered": false, "since": 0.2 },
+  { "widget": "replay", "options": "speed, src", "remembered": null, "since": 0.2 }
+]
