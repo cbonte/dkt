@@ -197,6 +197,16 @@ shows is loaded when the reader gets near it.
 
 A Markdown table, which gets a filter and headings that sort.
 
+| Option    | Value                | Effect                                                         |
+| --------- | -------------------- | -------------------------------------------------------------- |
+| `src`     | a path               | a file of values that gives the table                          |
+| `columns` | headings, with commas | the columns to keep, in that order, with `src`                |
+
+With `src`, the site builds the table from a file written relative to the document, and it takes the
+place of the blocks the widget holds. The file is separated by tabs, or by commas when its name ends
+in `.csv`, and its first row gives the headings. The file is the one a test of the project writes, so
+that the table follows the code. A missing file or a missing column stops the build.
+
 The filter keeps the rows that hold every word typed, whatever the case. The count says `n of N`,
 and the filter is written in the address as `?filter-ID=words`, so a link can open a filtered table.
 A click on a heading sorts by its column, a second click sorts the other way. The order is the one
@@ -322,11 +332,17 @@ dkt site: 19 pages written to public
 | Option  | Value                   | Effect                                |
 | ------- | ----------------------- | ------------------------------------- |
 | `speed` | a number from 0.25 to 8 | the speed of the replay, 1 by default |
+| `src`   | a path                  | a file that holds the session         |
 
 The first code block is a terminal session. A line that starts with `$ ` is typed one character
 after the other, and the other lines appear one after the other. The session starts when it comes
 into view, and `Pause`, `Restart` and `Replay` are its buttons. A reader whose system asks for less
 motion gets the whole session at once.
+
+With `src`, the site builds the session from a file written relative to the document, and it takes
+the place of the code block the widget holds. The file is plain text, or a recording of version 2
+of asciinema. A recording gives its output without the escape sequences and without its timing.
+A file that cannot be read stops the build.
 
 ## Since
 

@@ -6,6 +6,7 @@
 
 pub mod config;
 pub mod exclude;
+mod fromfile;
 mod links;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -208,6 +209,8 @@ fn read_document(root: &Path, entry: &Entry) -> Result<String> {
     let path = root.join(&entry.src);
     let text = fs::read_to_string(&path).with_context(|| format!("cannot read {}", entry.src))?;
     let markdown = entry.format.markdown_in(&text, path.parent());
+    let markdown =
+        fromfile::expand(&markdown, path.parent()).with_context(|| format!("in {}", entry.src))?;
     Ok(match &entry.title {
         Some(title) => with_title(&markdown, title),
         None => markdown,
@@ -334,6 +337,57 @@ struct SectionView {
     description: String,
     url: String,
     pages: Vec<PageLink>,
+    groups: Vec<GroupView>,
+}
+
+#[derive(Serialize)]
+struct GroupView {
+    title: String,
+    pages: Vec<PageLink>,
+}
+
+/// Whether the document `src` is named by `pattern`, an exact path or one with a single `*`.
+fn names(pattern: &str, src: &str) -> bool {
+    match pattern.split_once('*') {
+        None => normalize(pattern).as_deref() == Some(src),
+        Some((head, tail)) => {
+            src.len() >= head.len() + tail.len()
+                && src.starts_with(head)
+                && src.ends_with(tail)
+                && !src[head.len()..src.len() - tail.len()].contains('/')
+        }
+    }
+}
+
+/// The groups of the menu of a section: the pages each one names, in the order it names them.
+fn menu_groups(section: &config::Section, pages: &[(&str, &PageLink)]) -> Result<Vec<GroupView>> {
+    let mut groups = Vec::new();
+    for group in &section.group {
+        let mut members: Vec<PageLink> = Vec::new();
+        for pattern in &group.pages {
+            let mut found: Vec<&PageLink> = pages
+                .iter()
+                .filter(|(src, link)| {
+                    names(pattern, src) && link.section.as_deref() == Some(&section.name)
+                })
+                .map(|(_, link)| *link)
+                .collect();
+            if found.is_empty() {
+                bail!(
+                    "the group '{}' of the section '{}' names '{pattern}', which is no page of it",
+                    group.title,
+                    section.name
+                );
+            }
+            found.sort_by(|a, b| (a.weight, &a.title).cmp(&(b.weight, &b.title)));
+            members.extend(found.into_iter().cloned());
+        }
+        groups.push(GroupView {
+            title: group.title.clone(),
+            pages: members,
+        });
+    }
+    Ok(groups)
 }
 
 #[derive(Serialize)]
