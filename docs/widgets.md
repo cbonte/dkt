@@ -28,7 +28,8 @@ an edit that adds a widget above it would rename it.
 
 ## Rules
 
-- A widget is closed by an `end`, and cannot hold another widget.
+- A widget is closed by an `end`, and cannot hold another widget, except `tabs`, which may hold
+  `steps` and `checklist`, each closed by its own `end`.
 - A `replace` cannot start inside a widget, nor a widget inside a `replace`.
 - The blocks of a widget go through the same rendering as the rest of the page, so headings keep
   their anchors and links keep their targets.

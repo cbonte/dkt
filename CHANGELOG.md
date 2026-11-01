@@ -5,6 +5,7 @@
 - site: load the widgets and their style in the pages of any theme.
 - site: refuse a link to a file that the site does not serve, as link-unserved.
 - site: leave files out of an asset directory with patterns, at any depth.
+- widgets: allow steps and checklist inside tabs.
 - site: split the menu of a section into titled groups with [[section.group]].
 - table: build the table from a file of values with src.
 - replay: read the session from a recorded file with src.

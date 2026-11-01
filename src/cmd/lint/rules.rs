@@ -439,7 +439,8 @@ fn check_blocks(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Finding
 /// Checks the annotations for the site: each one holds, and a `replace` is closed by an `end`.
 fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
     use crate::annotation::{self, Kind};
-    let mut open: Option<(Kind, usize)> = None;
+    // What is open: the kind, the name of the widget and where it starts.
+    let mut open: Vec<(Kind, String, usize)> = Vec::new();
     for (event, range) in Parser::new_ext(src.text, parser_options()).into_offset_iter() {
         let Event::Html(html) = event else { continue };
         let Some(parsed) = annotation::from_html(&html) else {
@@ -451,30 +452,44 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
         match parsed {
             Err(why) => report(format!("site annotation: {why}")),
             Ok(note) => match note.kind {
-                Kind::Replace | Kind::Widget if open.is_some() => {
-                    let (kind, _) = open.expect("an open region");
-                    report(if kind == note.kind {
-                        format!(
-                            "a {} inside another one: close the first with an end",
-                            kind.name()
-                        )
+                Kind::Replace | Kind::Widget if !open.is_empty() => {
+                    let (kind, name, _) = open.last().expect("an open region").clone();
+                    let inner = note.get("widget").unwrap_or_default().to_string();
+                    if note.kind == Kind::Widget
+                        && open.len() == 1
+                        && kind == Kind::Widget
+                        && name == "tabs"
+                        && NESTED_IN_TABS.contains(&inner.as_str())
+                    {
+                        open.push((note.kind, inner, range.start));
                     } else {
-                        format!(
-                            "a {} inside a {}: close the first with an end",
-                            note.kind.name(),
-                            kind.name()
-                        )
-                    });
+                        report(if kind == note.kind {
+                            format!(
+                                "a {} inside another one: close the first with an end",
+                                kind.name()
+                            )
+                        } else {
+                            format!(
+                                "a {} inside a {}: close the first with an end",
+                                note.kind.name(),
+                                kind.name()
+                            )
+                        });
+                    }
                 }
-                Kind::Replace | Kind::Widget => open = Some((note.kind, range.start)),
-                Kind::End if open.take().is_none() => {
+                Kind::Replace | Kind::Widget => open.push((
+                    note.kind,
+                    note.get("widget").unwrap_or_default().to_string(),
+                    range.start,
+                )),
+                Kind::End if open.pop().is_none() => {
                     report("an end with no replace or widget before it".to_string());
                 }
                 _ => {}
             },
         }
     }
-    if let Some((kind, offset)) = open {
+    for (kind, _, offset) in open {
         out.push(src.finding(
             offset,
             Rule::SiteAnnotation,
@@ -482,6 +497,9 @@ fn check_annotations(src: &Source<'_>, out: &mut Vec<Finding>) {
         ));
     }
 }
+
+/// The widgets that a `tabs` widget may hold, 1 level deep.
+const NESTED_IN_TABS: [&str; 2] = ["steps", "checklist"];
 
 /// Lines that hold verbatim content, where whitespace and length rules do not apply.
 fn verbatim_lines(src: &Source<'_>) -> HashSet<usize> {
@@ -733,8 +751,22 @@ mod tests {
             ["1:1: site-annotation: a widget is never closed by an end"]
         );
         let nested =
-            "<!-- site: widget tabs -->\n\n<!-- site: widget steps -->\n\n<!-- site: end -->\n";
+            "<!-- site: widget steps -->\n\n<!-- site: widget steps -->\n\n<!-- site: end -->\n";
         assert!(findings(nested, &[Rule::SiteAnnotation])[0].contains("inside another one"));
+        let in_tabs = "<!-- site: widget tabs -->\n\n### A\n\n<!-- site: widget steps -->\n\n1. a\n\n<!-- site: end -->\n\n<!-- site: end -->\n";
+        assert!(findings(in_tabs, &[Rule::SiteAnnotation]).is_empty());
+        let too_deep = "<!-- site: widget tabs -->\n\n<!-- site: widget steps -->\n\n<!-- site: widget checklist -->\n";
+        assert!(
+            findings(too_deep, &[Rule::SiteAnnotation])
+                .iter()
+                .any(|f| f.contains("inside another one"))
+        );
+        let not_allowed = "<!-- site: widget tabs -->\n\n<!-- site: widget table -->\n";
+        assert!(
+            findings(not_allowed, &[Rule::SiteAnnotation])
+                .iter()
+                .any(|f| f.contains("inside another one"))
+        );
         let mixed = "<!-- site: replace src=a.png -->\n\n<!-- site: widget tabs -->\n";
         assert!(
             findings(mixed, &[Rule::SiteAnnotation])
