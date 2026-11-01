@@ -21,7 +21,7 @@ The checks do not run on a push to a branch. They run in 3 cases:
 
 | Case | What runs |
 | --- | --- |
-| a pull request | the tests on Linux and Windows, clippy and the notice |
+| a pull request | the tests on Linux, clippy and the notice |
 | a tag `v*` | the same checks, the release archive and the site |
 | a manual run | the checks, or the site, from the Actions tab |
 
