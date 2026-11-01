@@ -330,7 +330,6 @@ struct SiteView<'a> {
     description: &'a str,
     base_url: &'a str,
     base_path: &'a str,
-    repo: &'a str,
     colors_css: String,
     search: bool,
     previews: bool,
@@ -430,6 +429,9 @@ fn entries(cfg: &Config, root: &Path, base: &str) -> Result<Vec<Entry>> {
     Ok(out)
 }
 
+/// The check of a site that no document of `dkt lint` has: a link to a file that the site does not serve.
+const UNSERVED: &str = "link-unserved";
+
 fn rule(name: &str) -> Result<Rule> {
     Rule::from_str(name, true).map_err(|_| anyhow!("unknown lint rule '{name}'"))
 }
@@ -440,7 +442,7 @@ fn check(cfg: &Config, root: &Path, documents: &[(&Entry, &str)]) -> Result<Vec<
     for name in &cfg.lint.enable {
         enabled.insert(rule(name)?);
     }
-    for name in &cfg.lint.disable {
+    for name in cfg.lint.disable.iter().filter(|n| *n != UNSERVED) {
         enabled.remove(&rule(name)?);
     }
     let found = parallel::map(documents, |(entry, text)| {
@@ -563,10 +565,31 @@ fn headings(page: &Page) -> Vec<HeadingView> {
         .collect()
 }
 
+/// A properties file of an earlier version that still gives `repo` or `branch` is refused, since
+/// they would be dropped without a word.
+fn refuse_the_repository(text: &str, config: &Path) -> Result<()> {
+    let Ok(table) = text.parse::<toml::Table>() else {
+        return Ok(());
+    };
+    let Some(site) = table.get("site").and_then(|s| s.as_table()) else {
+        return Ok(());
+    };
+    for key in ["repo", "branch"] {
+        if site.contains_key(key) {
+            bail!(
+                "{}: `{key}` is no longer an option of [site]: give the address of the repository as `repo` in [data], and write a link to a file that the site does not serve as a full address",
+                config.display()
+            );
+        }
+    }
+    Ok(())
+}
+
 /// Builds the site described by the properties file and returns what it wrote.
 pub fn build(opts: &Options) -> Result<Report> {
     let text = fs::read_to_string(&opts.config)
         .with_context(|| format!("cannot read {}", opts.config.display()))?;
+    refuse_the_repository(&text, &opts.config)?;
     let cfg: Config = toml::from_str(&text)
         .with_context(|| format!("cannot read the properties in {}", opts.config.display()))?;
     let root = opts
@@ -665,7 +688,27 @@ pub fn build(opts: &Options) -> Result<Report> {
             )
         })
         .collect();
-    let links = LinkMap::new(&root, served, assets, &cfg.site.repo, &cfg.site.branch);
+    let links = LinkMap::new(&root, served, assets);
+    if opts.lint && !cfg.lint.disable.iter().any(|n| n == UNSERVED) {
+        let mut found = Vec::new();
+        for (entry, md) in entries.iter().zip(&kept_md) {
+            let path = root.join(&entry.src);
+            for (line, col, target) in rules::local_targets(&path, md) {
+                if let Some(rel) = links.unserved(&entry.src, &target) {
+                    found.push(format!(
+                        "{}:{line}:{col}: {UNSERVED}: {rel} exists, and the site does not serve it",
+                        entry.src
+                    ));
+                }
+            }
+        }
+        if !found.is_empty() {
+            bail!(
+                "the documents link to files that the site does not serve:\n{}",
+                found.join("\n")
+            );
+        }
+    }
 
     let prefix = |url: String| {
         if url.starts_with('/') {
@@ -729,7 +772,6 @@ pub fn build(opts: &Options) -> Result<Report> {
         description: &cfg.site.description,
         base_url: &base_url,
         base_path: &base,
-        repo: &cfg.site.repo,
         colors_css: colors_css(&cfg.colors)?,
         search: cfg.site.search,
         previews: cfg.site.previews && cfg.site.search,

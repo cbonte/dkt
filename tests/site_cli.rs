@@ -42,7 +42,6 @@ const CONFIG: &str = r#"
 [site]
 title = "T"
 base_url = "https://example.com/t"
-repo = "https://github.com/o/r"
 
 [[nav]]
 name = "Tour"
@@ -72,6 +71,9 @@ url = "/img/"
 src = "/img/{name}-light.png"
 dark = "/img/{name}-dark.png"
 
+[data]
+repo = "https://github.com/o/r"
+
 [data.home]
 lede = "Hello"
 "#;
@@ -89,7 +91,7 @@ fn site(dir: &TempDir) {
     dir.file("templates/index.html", "<h1>{{ data.home.lede }}</h1>");
     dir.file(
         "README.md",
-        "# Tour\n\nSee [the guide](docs/guides/a.md#start), [the code](src/main.rs) and ![shot](docs/img/x.png).\n",
+        "# Tour\n\nSee [the guide](docs/guides/a.md#start), [the code](https://example.com/main.rs) and ![shot](docs/img/x.png).\n",
     );
     dir.file(
         "docs/guides/a.md",
@@ -134,7 +136,7 @@ fn builds_the_pages_with_their_links() {
     assert!(tour.contains(r#"<a href="/t/tour/">Tour</a>"#), "{tour}");
     assert!(tour.contains(r#"href="/t/guides/a/#start""#), "{tour}");
     assert!(
-        tour.contains(r#"href="https://github.com/o/r/blob/main/src/main.rs""#),
+        tour.contains(r#"href="https://example.com/main.rs""#),
         "{tour}"
     );
     assert!(tour.contains(r#"src="/t/img/x.png""#), "{tour}");
@@ -760,4 +762,51 @@ fn a_built_in_theme_loads_the_widgets_once() {
     assert_eq!(page.matches("widgets.js").count(), 1, "{page}");
     assert_eq!(page.matches("widgets.css").count(), 1, "{page}");
     assert_eq!(page.matches("content.css").count(), 1, "{page}");
+}
+
+#[test]
+fn a_link_to_a_file_the_site_does_not_serve_stops_the_build() {
+    let dir = TempDir::new("unserved");
+    site(&dir);
+    dir.file(
+        "docs/guides/b.md",
+        "# B\n\nlede of b\n\nSee [the code](../../src/main.rs#L1) and ![a](../img/x.png).\n",
+    );
+    let out = build(&dir, &[]);
+    assert!(!out.status.success());
+    let err = stderr(&out);
+    assert!(err.contains("docs/guides/b.md:5:"), "{err}");
+    assert!(err.contains("link-unserved"), "{err}");
+    assert!(err.contains("src/main.rs"), "{err}");
+    assert!(!err.contains("img/x.png"), "an asset is served: {err}");
+    assert!(build(&dir, &["--no-lint"]).status.success());
+
+    dir.file(
+        "dkt.toml",
+        &format!("{}\n[lint]\ndisable = [\"link-unserved\"]\n", CONFIG),
+    );
+    let out = build(&dir, &[]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(
+        dir.read("public/guides/b/index.html")
+            .contains(r#"href="../../src/main.rs#L1""#)
+    );
+}
+
+#[test]
+fn the_repository_options_of_an_earlier_version_are_refused() {
+    let dir = TempDir::new("repo-gone");
+    site(&dir);
+    dir.file(
+        "dkt.toml",
+        &CONFIG.replace("[site]\n", "[site]\nrepo = \"https://github.com/o/r\"\n"),
+    );
+    let out = build(&dir, &[]);
+    assert!(!out.status.success());
+    let err = stderr(&out);
+    assert!(
+        err.contains("`repo` is no longer an option of [site]"),
+        "{err}"
+    );
+    assert!(err.contains("[data]"), "{err}");
 }

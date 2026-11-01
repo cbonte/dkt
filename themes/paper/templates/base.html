@@ -16,13 +16,13 @@
 <header class="top">
 <a class="brand" href="{{ site.base_path }}/">{% include "partials/brand.html" %}</a>
 <nav>{% for n in nav %}<a href="{{ n.url }}"{% if n.current %} aria-current="page"{% endif %}>{{ n.name }}</a>{% endfor %}</nav>
-{% if site.repo %}<a class="aside" href="{{ site.repo }}">Source</a>{% endif %}
+{% if data.repo %}<a class="aside" href="{{ data.repo }}">Source</a>{% endif %}
 {% if site.search %}<button type="button" class="aside search-open" aria-label="Search the titles" hidden>Search</button>{% endif %}
 <button type="button" class="aside theme-toggle" aria-label="Switch theme" aria-pressed="false"><span class="to-dark">Dark</span><span class="to-light">Light</span></button>
 </header>
 <div class="rule"></div>
 {% block main %}{% endblock %}
-<footer><span>{{ site.title }}</span>{% if site.repo %} <a href="{{ site.repo }}">{{ site.repo | replace("https://", "") }}</a>{% endif %}</footer>
+<footer><span>{{ site.title }}</span>{% if data.repo %} <a href="{{ data.repo }}">{{ data.repo | replace("https://", "") }}</a>{% endif %}</footer>
 {% if site.search %}<dialog class="search" data-base="{{ site.base_path }}" aria-label="Search">
 <input type="search" placeholder="Search the titles" autocomplete="off" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="true">
 <p class="status" role="status">Type to search the titles.</p>

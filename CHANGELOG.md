@@ -3,6 +3,11 @@
 ## Added
 
 - site: load the widgets and their style in the pages of any theme.
+- site: refuse a link to a file that the site does not serve, as link-unserved.
+
+## Changed
+
+- site: refuse repo and branch in the site table, and read the repository link from data.repo instead.
 
 # 0.2.0 - 2026-10-31
 

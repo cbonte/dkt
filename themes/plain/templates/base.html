@@ -15,7 +15,7 @@
 <header>
 <a class="brand" href="{{ site.base_path }}/">{% include "partials/brand.html" %}</a>
 <nav>{% for n in nav %}<a href="{{ n.url }}"{% if n.current %} aria-current="page"{% endif %}>{{ n.name }}</a>{% endfor %}</nav>
-{% if site.repo %}<a href="{{ site.repo }}">Source</a>{% endif %}
+{% if data.repo %}<a href="{{ data.repo }}">Source</a>{% endif %}
 {% if site.search %}<button type="button" class="search-open" aria-label="Search the titles" hidden>Search</button>{% endif %}
 </header>
 <main>

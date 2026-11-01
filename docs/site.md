@@ -49,12 +49,13 @@ dkt site --only section:3.4 --only home -o public
 | its description     | the paragraph that directly follows it                               |
 | anchors             | the ones GitHub gives, so a link written for GitHub holds            |
 | links between pages | the relative links of the documents, such as `guides/a.md#start`     |
-| a file not served   | a link to it in the repository, at the branch of the properties file |
 | anything else       | a [site annotation](html.md#annotations) or the properties file      |
 
 A relative link to a served document becomes a link to its page, with its anchor. A link to a file
-of an asset directory points to where the site serves it. A link to any other file that exists goes
-to the repository. A target that does not exist is left as written, and the check reports it.
+of an asset directory points to where the site serves it. A link to any other file that exists is
+refused by the check as `link-unserved`, since it would leave the site: publish the file, or write the
+link as a full address. `[lint] disable = ["link-unserved"]` leaves such a link as written. A target
+that does not exist is left as written, and the check reports it.
 
 The body of a page starts with its title and its first paragraph, as the document does on GitHub, so
 a template does not write them again.
@@ -65,7 +66,7 @@ It is a TOML file.
 
 | Table         | What it says                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `[site]`      | `title`, `description`, `base_url`, `repo`, `branch`, `templates`, `static`, `theme`, `search`, `previews`         |
+| `[site]`      | `title`, `description`, `base_url`, `templates`, `static`, `theme`, `search`, `previews`         |
 | `[[nav]]`     | a menu entry: `name`, `url`, and `section` to keep it current in a section                                         |
 | `[home]`      | the page at the root: its `template`, and a `src` document that the template shows                                 |
 | `[[section]]` | a group of pages with an index of its own: `name`, `url`, `title`, `description`, `template`, `sidebar`            |
@@ -95,7 +96,6 @@ its own.
 [site]
 title = "lokode"
 base_url = "https://loken-ai.github.io/lokode"
-repo = "https://github.com/loken-ai/lokode"
 
 [[nav]]
 name = "Guides"
@@ -258,7 +258,7 @@ A template is a Jinja file in the `templates` directory. It can extend and inclu
 
 | Name       | Value                                                                                          |
 | ---------- | ---------------------------------------------------------------------------------------------- |
-| `site`     | `title`, `description`, `base_url`, `base_path`, `repo`, `search`, `nav` and `sections`        |
+| `site`     | `title`, `description`, `base_url`, `base_path`, `search`, `nav` and `sections`        |
 | `sections` | by name: `title`, `description`, `url`, `sidebar` and `pages`, in order                        |
 | `nav`      | the menu for the page being drawn, each entry with `name`, `url` and `current`                 |
 | `page`     | `title`, `description`, `content`, `headings`, `path`, `url`, `section`, `nav_title`, `weight` |

@@ -2,8 +2,6 @@
 title = "dkt"
 description = "Doc Kit: document tools in one binary. Render, format, index, check and publish documents, in Markdown, reStructuredText and other formats, that stay readable on GitHub."
 base_url = "https://cbonte.github.io/dkt"
-repo = "https://github.com/cbonte/dkt"
-branch = "master"
 static = "static"
 previews = true
 
@@ -68,6 +66,7 @@ title = "HAProxy sample"
 src = "/brand/{name}.svg"
 
 [data]
+repo = "https://github.com/cbonte/dkt"
 install = "cargo install --path ."
 
 [data.brand]

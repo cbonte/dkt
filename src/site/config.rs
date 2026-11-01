@@ -55,11 +55,6 @@ pub struct Site {
     /// Where the site is published. Its path is the prefix of every address.
     #[serde(default)]
     pub base_url: String,
-    /// The repository of the documents, where a link to a file the site does not serve goes.
-    #[serde(default)]
-    pub repo: String,
-    #[serde(default = "default_branch")]
-    pub branch: String,
     /// Directory of the templates, next to the properties file.
     #[serde(default = "default_templates")]
     pub templates: PathBuf,
@@ -80,10 +75,6 @@ pub struct Site {
 
 fn default_search() -> bool {
     true
-}
-
-fn default_branch() -> String {
-    "main".to_string()
 }
 
 fn default_templates() -> PathBuf {

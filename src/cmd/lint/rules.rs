@@ -129,6 +129,39 @@ fn decode_path(s: &str) -> String {
     String::from_utf8(out).unwrap_or_else(|_| s.to_string())
 }
 
+/// The paths that the links and the images of a document point at inside the file tree, each with
+/// the line and the column where it is written. The query and the anchor are left out.
+pub fn local_targets(path: &Path, text: &str) -> Vec<(usize, usize, String)> {
+    let src = Source::new(path, text);
+    let mut out = Vec::new();
+    for (event, range) in Parser::new_ext(text, parser_options()).into_offset_iter() {
+        let (dest, link_type) = match &event {
+            Event::Start(Tag::Link {
+                dest_url,
+                link_type,
+                ..
+            })
+            | Event::Start(Tag::Image {
+                dest_url,
+                link_type,
+                ..
+            }) => (dest_url.to_string(), *link_type),
+            _ => continue,
+        };
+        if matches!(link_type, LinkType::Email) || is_external(&dest) || dest.is_empty() {
+            continue;
+        }
+        let (path_part, _) = split_target(&dest);
+        let path_part = path_part.split('?').next().unwrap_or(path_part);
+        if path_part.is_empty() {
+            continue;
+        }
+        let (line, col) = src.at(range.start);
+        out.push((line, col, decode_path(path_part)));
+    }
+    out
+}
+
 /// Checks every link and image target that stays inside the file tree.
 fn check_targets(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Finding>) {
     let dir = src.path.parent().unwrap_or(Path::new("."));
