@@ -2,8 +2,6 @@
 
 ## 0.3.0 Site groups, vector diagrams, data files, versions and replayed sessions
 
-Build sites with menu groups and links between trees, draw diagrams as vector figures, read tables and sessions from files, serve several versions of a documentation, play a full screen session as snapshots, and light the parts of a figure step by step.
-
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
 | `site` | Split the menu of a section into titled groups, link to a document of another tree with `[[mirror]]`, leave files out of an asset directory with patterns, and refuse a link to a file that the site does not serve. | 1 | Done |
@@ -18,8 +16,6 @@ Build sites with menu groups and links between trees, draw diagrams as vector fi
 
 ## 0.4.0 More diagrams, more formats
 
-Draw a graph written in another notation, read more kinds of source, write a manual page, and play a full screen session in the browser.
-
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
 | `html` | Draw a Graphviz DOT graph as a diagram, with the layered layout of the Mermaid drawer. | 1 | Planned |
@@ -29,8 +25,6 @@ Draw a graph written in another notation, read more kinds of source, write a man
 | `replay` | Play a full screen session through a terminal emulator in the browser. | 3 | Planned |
 
 ## 0.5.0 Export a site to Confluence
-
-Render a site as Confluence pages, check the pages as files, and reach a Confluence Cloud site from dkt.
 
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
@@ -43,8 +37,6 @@ Render a site as Confluence pages, check the pages as files, and reach a Conflue
 
 ## 0.6.0 Publish a site to Confluence Cloud
 
-Create the pages of a site in a Confluence Cloud space, and push again only what changed, without overwriting an edit made by a person.
-
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
 | `confluence` | Print the plan of a push as a diff of created, updated, unchanged and orphan pages, without writing. | 1 | Planned |
@@ -55,8 +47,6 @@ Create the pages of a site in a Confluence Cloud space, and push again only what
 | `confluence` | Report the pages that the site no longer holds, and leave them in place. | 2 | Planned |
 
 ## 0.7.0 Existing pages and Data Center
-
-Start from the pages a space already holds, keep a push inside its scope, and reach Confluence Data Center.
 
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
