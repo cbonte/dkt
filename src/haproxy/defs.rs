@@ -83,7 +83,7 @@ pub fn definitions(body: &[Line<'_>], least: usize) -> Option<Vec<(String, Strin
         continued: Vec<usize>,
     }
     let mut entries: Vec<Entry> = Vec::new();
-    for l in &lines {
+    for (k, l) in lines.iter().enumerate() {
         if l.indent == min {
             let (name, text, col) = split(l)?;
             entries.push(Entry {
@@ -96,7 +96,8 @@ pub fn definitions(body: &[Line<'_>], least: usize) -> Option<Vec<(String, Strin
             let e = entries.last_mut()?;
             e.continued.push(l.indent);
             if !e.text.is_empty() {
-                e.text.push(' ');
+                let separator = super::text::separator(lines[k - 1], l);
+                e.text.push(separator);
             }
             e.text.push_str(l.text);
         }

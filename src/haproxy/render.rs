@@ -445,8 +445,11 @@ fn list_numbered(items: &[Item], start: u32, depth: usize, links: &Links, out: &
     let pad = "  ".repeat(depth);
     for (k, item) in items.iter().enumerate() {
         let marker = format!("{}. ", start as usize + k);
-        out.push_str(&format!("{pad}{marker}{}\n", item_text(&item.text, links)));
         let inner_pad = " ".repeat(marker.len());
+        out.push_str(&format!(
+            "{pad}{marker}{}\n",
+            breaks(&item_text(&item.text, links), &format!("{pad}{inner_pad}"))
+        ));
         for block in &item.rest {
             let mut inner = String::new();
             content(block, links, &mut inner);
@@ -460,6 +463,11 @@ fn list_numbered(items: &[Item], start: u32, depth: usize, links: &Links, out: &
             }
         }
     }
+}
+
+/// A line break of the text as a hard break of Markdown, then what starts the next line.
+fn breaks(text: &str, indent: &str) -> String {
+    text.replace('\n', &format!("  \n{indent}"))
 }
 
 fn item_text(text: &str, links: &Links) -> String {
@@ -502,7 +510,7 @@ fn list(items: &[Item], depth: usize, links: &Links, out: &mut String) {
     for item in items {
         out.push_str(&pad);
         out.push_str("- ");
-        out.push_str(&item_text(&item.text, links));
+        out.push_str(&breaks(&item_text(&item.text, links), &format!("{pad}  ")));
         out.push('\n');
         for block in &item.rest {
             let mut inner = String::new();
@@ -673,12 +681,15 @@ pub fn render(banner: &Banner, blocks: &[Block]) -> String {
 /// The Markdown of a block that is not a heading, a summary or a keyword.
 fn content(block: &Block, links: &Links, out: &mut String) {
     match block {
-        Block::Para(text) => out.push_str(&format!("{}\n\n", inline(text, links))),
+        Block::Para(text) => out.push_str(&format!("{}\n\n", breaks(&inline(text, links), ""))),
         Block::Code(lines) => fence(lines, out),
         Block::Figure(lines) => fence_as("diagram", lines, out),
         Block::Definitions(items) => {
             for (name, description) in items {
-                out.push_str(&format!("- `{name}` {}\n", inline(description, links)));
+                out.push_str(&format!(
+                    "- `{name}` {}\n",
+                    breaks(&inline(description, links), "  ")
+                ));
             }
             out.push('\n');
         }
@@ -724,9 +735,10 @@ fn content(block: &Block, links: &Links, out: &mut String) {
                 }
             }
         }
-        Block::Note { kind, text } => {
-            out.push_str(&format!("> [!{kind}]\n> {}\n\n", inline(text, links)))
-        }
+        Block::Note { kind, text } => out.push_str(&format!(
+            "> [!{kind}]\n> {}\n\n",
+            breaks(&inline(text, links), "> ")
+        )),
         Block::Subtitle(text) => out.push_str(&format!("**{}**\n\n", inline(text.trim(), links))),
         Block::Usable(rows) => out.push_str(&format!("**Usable in:** {}\n\n", usable_line(rows))),
         Block::Label(text) => out.push_str(&format!("**{}:**\n\n", inline(text.trim(), links))),
@@ -812,5 +824,77 @@ mod tests {
             links.keywords.get("harden.reject-privileged-ports.quic"),
             tcp
         );
+    }
+
+    fn markdown_of(source: &str) -> String {
+        crate::haproxy::convert(source).markdown
+    }
+
+    #[test]
+    fn a_line_that_ends_a_sentence_breaks_and_a_line_that_only_wraps_does_not() {
+        let text = "Title\n-----\n\nThis sentence ends here and the next line starts a new one in the text.\nThe next sentence is long enough to wrap over the width of the line and\nthen it stops there. What follows is a list of the things that matter:\nthe last line of the paragraph ends the text.\n";
+        let md = markdown_of(text);
+        assert!(
+            md.contains(
+                "in the text.  \nThe next sentence is long enough to wrap over the width of the line and then it stops there. What follows is a list of the things that matter:  \nthe last line"
+            ),
+            "{md}"
+        );
+    }
+
+    #[test]
+    fn a_break_inside_a_note_keeps_the_quote_marker() {
+        let text = "Title\n-----\n\nNote: a first sentence.\n      A second one that wraps\n      onto this line.\n";
+        let md = markdown_of(text);
+        assert!(
+            md.contains(
+                "> [!NOTE]\n> a first sentence.  \n> A second one that wraps onto this line."
+            ),
+            "{md}"
+        );
+    }
+
+    #[test]
+    fn a_break_inside_an_item_stays_in_the_item() {
+        let text = "Title\n-----\n\n  - first item, a sentence.\n    It goes on over\n    two lines.\n  - second item\n";
+        let md = markdown_of(text);
+        assert!(
+            md.contains("- first item, a sentence.  \n  It goes on over two lines.\n"),
+            "{md}"
+        );
+    }
+
+    #[test]
+    fn a_line_breaks_after_its_punctuation_unless_it_is_full() {
+        use super::super::text::{Line, separator};
+        let line = |text| Line { text, indent: 0 };
+        let short = line("A short line that ends here.");
+        assert_eq!(separator(&short, &line("Next")), '\n');
+        assert_eq!(separator(&line("and so on..."), &line("Next")), '\n');
+        assert_eq!(separator(&line("a list:"), &line("Next")), '\n');
+        assert_eq!(separator(&line("wraps over"), &line("Next")), ' ');
+        assert_eq!(separator(&line("quoted \"end.\""), &line("Next")), '\n');
+        let near = "x".repeat(76) + "end.";
+        assert_eq!(
+            separator(&line(&near), &line("a")),
+            ' ',
+            "ends at the width"
+        );
+        let seventy = "y".repeat(66) + "end.";
+        assert_eq!(
+            separator(&line(&seventy), &line("It")),
+            '\n',
+            "the next word fits"
+        );
+        assert_eq!(
+            separator(&line(&seventy), &line("overwhelmingly")),
+            ' ',
+            "the next word could not come in"
+        );
+        let indented = Line {
+            text: &seventy,
+            indent: 8,
+        };
+        assert_eq!(separator(&indented, &line("It")), ' ', "the indent counts");
     }
 }

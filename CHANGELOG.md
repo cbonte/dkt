@@ -8,6 +8,7 @@
 
 ## Changed
 
+- haproxy: break the line where the text breaks it after a full stop, a colon or a question mark.
 - site: refuse repo and branch in the site table, and read the repository link from data.repo instead.
 
 ## Fixed

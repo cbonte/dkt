@@ -15,6 +15,36 @@ impl Line<'_> {
     }
 }
 
+/// The width at which HAProxy wraps its text.
+const WIDTH: usize = 80;
+
+/// How near the width a line must end to be taken as full.
+const CLOSE: usize = 3;
+
+/// What joins a line of a paragraph to the next one: a line break when the line ends a sentence or
+/// introduces what follows, a space when the line only wraps.
+///
+/// HAProxy wraps its text at a fixed width, so a line that stops after a full stop, a question or
+/// an exclamation mark, a colon, a semicolon or an ellipsis stops there on purpose, unless it is
+/// full. A line is full when it ends within a few columns of the width, or when the first word of
+/// the next line could not have come in: the punctuation is then where the text ran out of room.
+pub fn separator(previous: &Line<'_>, next: &Line<'_>) -> char {
+    let end = previous
+        .text
+        .trim_end()
+        .trim_end_matches([')', '"', '\'', '*', '`', ']']);
+    if !end.ends_with(['.', '!', '?', ':', ';']) {
+        return ' ';
+    }
+    let width = previous.indent + previous.text.chars().count();
+    let word = next.text.split(' ').next().map_or(0, |w| w.chars().count());
+    if width + CLOSE >= WIDTH || width + 1 + word > WIDTH {
+        ' '
+    } else {
+        '\n'
+    }
+}
+
 /// The text with tabs as 8 spaces, no carriage return and no trailing white space.
 pub fn normalise(text: &str) -> String {
     let mut out = String::with_capacity(text.len());

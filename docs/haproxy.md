@@ -23,6 +23,12 @@ are listed in its properties file, so a version that has no management guide doe
 The text is read in one pass. Anything that is not recognised stays as preformatted text, so the
 conversion never loses a line.
 
+HAProxy wraps its text at 80 columns, so a line that ends with a full stop, a question mark, an
+exclamation mark, a colon, a semicolon or an ellipsis stops there on purpose. The conversion
+writes it as a line break, with 2 spaces at the end of the line, and joins the other lines with a
+space. A line that ends within 3 columns of the width, or whose next word could not have come in,
+only wraps: its punctuation is where the room ran out.
+
 | In the text                                                           | In the Markdown                                               |
 | --------------------------------------------------------------------- | ------------------------------------------------------------- |
 | the banner                                                            | the title, with the version after its first word              |

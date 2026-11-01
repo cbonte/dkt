@@ -285,6 +285,18 @@ pub fn keyword_name(text: &str) -> Option<String> {
     parameters_ok.then(|| words.join(" "))
 }
 
+/// The lines of a paragraph as one text, with a line break where a line ends a sentence.
+fn flow(span: &[Line<'_>]) -> String {
+    let mut text = String::new();
+    for (k, l) in span.iter().enumerate() {
+        if k > 0 {
+            text.push(super::text::separator(&span[k - 1], l));
+        }
+        text.push_str(l.text);
+    }
+    text
+}
+
 fn is_marker(text: &str) -> bool {
     super::defs::marker(text).is_some()
 }
@@ -633,11 +645,11 @@ fn item(ls: &[Line<'_>], _indent: usize) -> Option<Item> {
         }
         match paragraph.as_mut() {
             Some(p) => {
-                p.push(' ');
+                p.push(super::text::separator(&ls[i - 1], &ls[i]));
                 p.push_str(ls[i].text);
             }
             None if rest.is_empty() => {
-                text.push(' ');
+                text.push(super::text::separator(&ls[i - 1], &ls[i]));
                 text.push_str(ls[i].text);
             }
             None => paragraph = Some(ls[i].text.to_string()),
@@ -1055,6 +1067,7 @@ fn quoted_entries(ls: &[Line<'_>], from: usize) -> Option<(Block, usize)> {
         let Some((name, mut text)) = entry(&ls[i]) else {
             break;
         };
+        let mut last = i;
         i += 1;
         loop {
             // The description goes on in the lines indented under the name, after blank lines too.
@@ -1063,8 +1076,9 @@ fn quoted_entries(ls: &[Line<'_>], from: usize) -> Option<(Block, usize)> {
                 j += 1;
             }
             if j < ls.len() && ls[j].indent > base {
-                text.push(' ');
+                text.push(super::text::separator(&ls[last], &ls[j]));
                 text.push_str(ls[j].text);
+                last = j;
                 i = j + 1;
             } else {
                 break;
@@ -1285,8 +1299,8 @@ fn prose(ls: &[Line<'_>], i: usize, base: usize, out: &mut Vec<Block>) -> usize 
             && !span.iter().any(|l| l.text.contains("   "))
         {
             let mut text = first.to_string();
-            for l in &span[1..] {
-                text.push(' ');
+            for (k, l) in span.iter().enumerate().skip(1) {
+                text.push(super::text::separator(&span[k - 1], l));
                 text.push_str(l.text);
             }
             out.push(Block::Note {
@@ -1315,14 +1329,8 @@ fn prose(ls: &[Line<'_>], i: usize, base: usize, out: &mut Vec<Block>) -> usize 
         && !span[0].text.contains(' ')
     {
         out.push(Block::Para(format!("<{}>", span[0].text)));
-    } else if option_item(span) {
-        out.push(Block::Para(
-            span.iter().map(|l| l.text).collect::<Vec<_>>().join(" "),
-        ));
-    } else if same && !gaps && super::defs::wrapped(span) {
-        out.push(Block::Para(
-            span.iter().map(|l| l.text).collect::<Vec<_>>().join(" "),
-        ));
+    } else if option_item(span) || (same && !gaps && super::defs::wrapped(span)) {
+        out.push(Block::Para(flow(span)));
     } else if has_arrows(span) {
         out.push(Block::Figure(common_indent(span)));
     } else if let Some(table) = aligned_table(span) {
