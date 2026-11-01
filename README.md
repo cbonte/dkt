@@ -1,6 +1,6 @@
 # dkt
 
-Doc Kit (dk:t) is a set of tools for documents, in one binary.
+Doc Optimized Components kit (dk:t) is a set of tools for documents, in one binary.
 
 ## Commands
 

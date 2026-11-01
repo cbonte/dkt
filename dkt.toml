@@ -1,6 +1,6 @@
 [site]
 title = "dkt"
-description = "Doc Kit: document tools in one binary. Render, format, index, check and publish documents, in Markdown, reStructuredText and other formats, that stay readable on GitHub."
+description = "Doc Optimized Components kit: document tools in one binary. Render, format, index, check and publish documents, in Markdown, reStructuredText and other formats, that stay readable on GitHub."
 base_url = "https://cbonte.github.io/dkt"
 static = "static"
 previews = true

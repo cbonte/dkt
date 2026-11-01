@@ -409,7 +409,7 @@ commands  examples  index.html  search.json
 $ dkt cat --width 40 README.md | head -3
 # dkt
 
-Doc Kit (dk:t) is a set of tools for documents.
+Doc Optimized Components kit (dk:t) is a set of tools for documents.
 ```
 
 <!-- site: end -->
