@@ -1,3 +1,9 @@
+# Unreleased
+
+## Fixed
+
+- html: return a back edge of a diagram by the side across the flow.
+
 # 0.3.0 - 2026-11-01
 
 ## Added

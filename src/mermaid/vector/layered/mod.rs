@@ -1021,15 +1021,14 @@ fn full(input: &Input, draw: bool) -> Option<(Plan, Option<Output>)> {
         *lay.lateral.borrow_mut() = links;
         x = lay.across(align, top_down);
     }
-    // The lanes of long edges that run inside the reach of a side of a node they end at, moved
-    // out past that
-    // side where their ranks leave room, so that the edge may turn once into the side instead
-    // of stepping: the routes compare both.
+    // The lanes of edges that run inside the reach of a side of a node they end at, moved
+    // out past that side where their ranks leave room, so that the edge may turn once into
+    // the side instead of stepping: the routes compare both.
     let mut pushed = x.clone();
     for (e, list) in edge_items.iter().enumerate() {
         let inner = &list[1..list.len() - 1];
         if flat[e].is_some()
-            || inner.len() < 2
+            || inner.is_empty()
             || inner.iter().any(|&i| (x[i] - x[inner[0]]).abs() > 0.05)
         {
             continue;
@@ -1897,6 +1896,36 @@ mod tests {
                 .filter(|s| matches!(s, Seg::Move(_)))
                 .count(),
             2
+        );
+    }
+
+    #[test]
+    fn a_back_edge_arrives_by_a_side_across_the_flow() {
+        let input = Input {
+            under_parents: true,
+            nodes: vec![node(), node()],
+            edges: vec![
+                edge(0, 1),
+                EdgeIn {
+                    from: 1,
+                    to: 0,
+                    label: Some((30.0, 14.0)),
+                    heads: (0.0, 9.0),
+                    look: 0,
+                },
+            ],
+            groups: Vec::new(),
+            title_side: TitleSide::AlongLow,
+            spacing: spacing(),
+        };
+        let out = layout(&input).unwrap();
+        let end = match out.edges[1].last().unwrap() {
+            Seg::Move(p) | Seg::Line(p) | Seg::Curve(_, _, p) => *p,
+        };
+        let c = out.nodes[0];
+        assert!(
+            (end.1 - c.1).abs() < 20.0 && (end.0 - c.0).abs() >= 20.0 - 1e-6,
+            "{end:?} from {c:?}"
         );
     }
 }
