@@ -2,7 +2,7 @@
 
 ## 0.3.0 Site groups, vector diagrams, data files, versions and replayed sessions
 
-Build sites with menu groups and links between trees, draw diagrams as vector figures, read tables and sessions from files, serve several versions of a documentation, and play a full screen session as snapshots.
+Build sites with menu groups and links between trees, draw diagrams as vector figures, read tables and sessions from files, serve several versions of a documentation, play a full screen session as snapshots, and light the parts of a figure step by step.
 
 | Area | Work | Priority | State |
 | ---- | ---- | -------- | ----- |
@@ -12,6 +12,7 @@ Build sites with menu groups and links between trees, draw diagrams as vector fi
 | `html` | Draw Mermaid diagrams as vector figures that fit the column, tinted by role with custom properties a theme may set. | 1 | Done |
 | `cat` | Draw Mermaid diagrams with fewer crossings, joined edges and colours by role. | 1 | Done |
 | `replay` | Play a full screen session as a series of SVG snapshots, 1 per step. | 1 | Done |
+| widgets | Light the parts of a figure step by step, the steps of a page playing a scene on it. | 1 | Done |
 | `site` | Serve several versions of the documentation, with a selector of versions. | 1 | Done |
 | `site` | Build a table from a JSON or a YAML file with `table src`. | 1 | Done |
 
