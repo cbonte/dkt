@@ -295,3 +295,48 @@ fn the_terminal_example_of_the_site_is_what_cat_writes() {
         "examples/terminal.md no longer shows what dkt cat writes:\n{written}"
     );
 }
+
+#[test]
+fn each_kind_of_diagram_takes_the_colours_of_its_parts() {
+    // Each diagram, and the least number of colours it shows: participants, notes, labels and
+    // calls; ends, steps, labels and the main path; boxes, labels and the main path; slices.
+    let diagrams = [
+        (
+            "sequenceDiagram\n A->>B: ask\n Note over B: think\n B-->>A: answer\n",
+            5,
+        ),
+        (
+            "stateDiagram-v2\n [*] --> Idle\n Idle --> Busy : go\n Busy --> Idle : rest\n Busy --> [*]\n",
+            4,
+        ),
+        (
+            "classDiagram\n class A {\n +x int\n }\n A <|-- B : extends\n",
+            3,
+        ),
+        ("erDiagram\n A ||--o{ B : has\n", 3),
+        ("pie title P\n \"a\" : 1\n \"b\" : 2\n \"c\" : 3\n", 3),
+    ];
+    let colour = [("COLORTERM", "truecolor"), ("TERM", "xterm-256color")];
+    for (code, least) in diagrams {
+        let page = format!("```mermaid\n{code}```\n");
+        let coloured = stdout(&run(
+            &["--color", "always", "--width", "120"],
+            &page,
+            &colour,
+        ));
+        let mut tints: Vec<&str> = coloured
+            .split('\x1b')
+            .filter_map(|s| s.split('m').next())
+            .filter(|s| s.contains("38;2;"))
+            .collect();
+        tints.sort_unstable();
+        tints.dedup();
+        assert!(tints.len() >= least, "{code}: {tints:?}\n{coloured}");
+        let plain = stdout(&run(
+            &["--color", "never", "--width", "120"],
+            &page,
+            &colour,
+        ));
+        assert!(!plain.contains('\x1b'), "{code}: {plain}");
+    }
+}

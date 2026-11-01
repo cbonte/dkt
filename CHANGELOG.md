@@ -10,11 +10,17 @@
 - table: build the table from a file of values with src.
 - replay: read the session from a recorded file with src.
 - site: serve a link to a document of another tree by its address, with [[mirror]].
+- html: draw Mermaid diagrams as vector figures that fit the column, with subgraphs and blocks.
+- html: tint the parts of a diagram by role, with custom properties a theme may set.
+- cat: colour the nodes of a diagram by role, its main path and its edge labels.
+- cat: colour the parts of a sequence diagram and the bars of a pie chart.
 
 ## Changed
 
 - haproxy: break the line where the text breaks it after a full stop, a colon or a question mark.
 - site: refuse repo and branch in the site table, and read the repository link from data.repo instead.
+- cat: draw Mermaid flowcharts with fewer crossings and straight edges between facing nodes.
+- cat: join the edges of a diagram that reach one node into a single last line.
 
 ## Fixed
 

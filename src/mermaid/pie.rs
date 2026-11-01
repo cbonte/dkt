@@ -1,5 +1,6 @@
 //! Pie charts drawn as horizontal bars.
 
+use super::canvas::tint;
 use crate::model::{Line, Segment};
 use crate::options::RenderOptions;
 use crate::wrap::display_width;
@@ -88,7 +89,18 @@ fn draw(pie: &Pie, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
     if let Some(title) = &pie.title {
         out.push(vec![Segment::new(title.clone(), opts.theme.base.bold())]);
     }
-    for ((label, value), figure) in pie.slices.iter().zip(&figures) {
+    // Each bar takes a colour of the diagram palette in turn: the roles of a node, then the
+    // others.
+    let order = [
+        tint::STEP,
+        tint::END,
+        tint::DECISION,
+        tint::STORE,
+        tint::GROUP,
+        tint::LABEL,
+        tint::RETURN,
+    ];
+    for (k, ((label, value), figure)) in pie.slices.iter().zip(&figures).enumerate() {
         let cells =
             ((value / largest * bar_max as f64).round() as usize).max(usize::from(*value > 0.0));
         let pad = " ".repeat(label_width - display_width(label) + COLUMN_GAP);
@@ -96,7 +108,7 @@ fn draw(pie: &Pie, width: usize, opts: &RenderOptions) -> Option<Vec<Line>> {
         let fill = " ".repeat(bar_max - cells + COLUMN_GAP);
         out.push(vec![
             Segment::new(format!("{label}{pad}"), opts.theme.base),
-            Segment::new(bar, opts.theme.table_border),
+            Segment::new(bar, opts.theme.diagram[usize::from(order[k % order.len()])]),
             Segment::new(format!("{fill}{figure}"), opts.theme.base),
         ]);
     }

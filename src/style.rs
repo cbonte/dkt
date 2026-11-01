@@ -263,6 +263,9 @@ pub struct Theme {
     pub footnote_ref: Style,
     /// File name printed above each document when several are rendered.
     pub file_header: Style,
+    /// Parts of a diagram drawn in text: a step, an end, a decision and a store by their
+    /// shape, then an edge label, the main path or a call, a group, and a return.
+    pub diagram: [Style; 8],
 }
 
 impl Default for Theme {
@@ -305,6 +308,16 @@ impl Default for Theme {
             ],
             footnote_ref: plain.fg(Color::Ansi16(14)),
             file_header: plain.bold().fg(Color::Ansi16(13)),
+            diagram: [
+                plain.fg(Color::Ansi16(14)),
+                plain.fg(Color::Ansi16(10)),
+                plain.fg(Color::Ansi16(11)),
+                plain.fg(Color::Ansi16(13)),
+                plain.fg(Color::Ansi16(6)),
+                plain.bold().fg(accent),
+                plain.fg(Color::Ansi16(5)),
+                plain.fg(Color::Ansi16(4)),
+            ],
         }
     }
 }

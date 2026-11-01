@@ -60,6 +60,26 @@ impl Dir {
     }
 }
 
+/// The colours of the diagram palette of the theme, by the part they colour.
+pub mod tint {
+    /// A step: any node but an end, a decision or a store, a participant.
+    pub const STEP: u8 = 0;
+    /// An end: a stadium, a circle, a start or end state.
+    pub const END: u8 = 1;
+    /// A decision: a diamond, a hexagon, a note.
+    pub const DECISION: u8 = 2;
+    /// A store: a cylinder.
+    pub const STORE: u8 = 3;
+    /// The text of an edge label or of a message.
+    pub const LABEL: u8 = 4;
+    /// The main path, a call.
+    pub const MAIN: u8 = 5;
+    /// A group.
+    pub const GROUP: u8 = 6;
+    /// A return.
+    pub const RETURN: u8 = 7;
+}
+
 /// How the lines of a cell are drawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Weight {
@@ -84,6 +104,8 @@ pub struct Canvas {
     w: usize,
     h: usize,
     cells: Vec<Cell>,
+    /// The colour of each cell, as an index in the palette given to `render_lines`.
+    tints: Vec<Option<u8>>,
 }
 
 impl Canvas {
@@ -92,6 +114,28 @@ impl Canvas {
             w,
             h,
             cells: vec![Cell::Empty; w * h],
+            tints: vec![None; w * h],
+        }
+    }
+
+    /// Gives the colour `tint` to the lines of the rectangle at `(x, y)`, `w` by `h`.
+    pub fn tint_lines(&mut self, x: usize, y: usize, w: usize, h: usize, tint: u8) {
+        for cy in y..(y + h).min(self.h) {
+            for cx in x..(x + w).min(self.w) {
+                let i = cy * self.w + cx;
+                if matches!(self.cells[i], Cell::Lines(..) | Cell::Glyph(_)) {
+                    self.tints[i] = Some(tint);
+                }
+            }
+        }
+    }
+
+    /// Gives the colour `tint` to the `cells`, whatever they hold.
+    pub fn tint(&mut self, cells: &[(usize, usize)], tint: u8) {
+        for &(x, y) in cells {
+            if x < self.w && y < self.h {
+                self.tints[y * self.w + x] = Some(tint);
+            }
         }
     }
 
@@ -185,7 +229,15 @@ impl Canvas {
     }
 
     /// One line per row, without blank rows at the ends nor blank columns on the left.
-    pub fn render_lines(&self, glyphs: &Glyphs, line: Style, text: Style) -> Vec<Line> {
+    /// The rows of the canvas as styled lines: the lines in `line`, the text in `text`, and each
+    /// tinted cell in its colour of `palette`.
+    pub fn render_lines(
+        &self,
+        glyphs: &Glyphs,
+        line: Style,
+        text: Style,
+        palette: &[Style],
+    ) -> Vec<Line> {
         let rows: Vec<&[Cell]> = self.cells.chunks(self.w.max(1)).collect();
         let used = |row: &&[Cell]| row.iter().any(|c| *c != Cell::Empty);
         let Some(first) = rows.iter().position(used) else {
@@ -197,9 +249,12 @@ impl Canvas {
             .filter_map(|r| r.iter().position(|c| *c != Cell::Empty))
             .min()
             .unwrap_or(0);
+        let width = self.w.max(1);
         rows[first..=last]
             .iter()
-            .map(|row| {
+            .enumerate()
+            .map(|(r, row)| {
+                let start = (first + r) * width;
                 let end = row
                     .iter()
                     .rposition(|c| *c != Cell::Empty)
@@ -209,12 +264,18 @@ impl Canvas {
                     Some(seg) if seg.style == style => seg.text.push(ch),
                     _ => segs.push(Segment::new(ch.to_string(), style)),
                 };
-                for cell in &row[left.min(end)..end] {
+                for (k, cell) in row.iter().enumerate().take(end).skip(left.min(end)) {
+                    let own = |base: Style| {
+                        self.tints[start + k]
+                            .and_then(|t| palette.get(usize::from(t)))
+                            .copied()
+                            .unwrap_or(base)
+                    };
                     match *cell {
                         Cell::Empty => push(' ', text),
-                        Cell::Lines(m, weight) => push(lines_glyph(m, weight, glyphs), line),
-                        Cell::Glyph(ch) => push(ch, line),
-                        Cell::Text(ch) => push(ch, text),
+                        Cell::Lines(m, weight) => push(lines_glyph(m, weight, glyphs), own(line)),
+                        Cell::Glyph(ch) => push(ch, own(line)),
+                        Cell::Text(ch) => push(ch, own(text)),
                         Cell::Cont => {}
                     }
                 }
@@ -465,10 +526,24 @@ mod tests {
 
     fn plain(canvas: Canvas) -> Vec<String> {
         canvas
-            .render_lines(&Glyphs::ascii(), Style::PLAIN, Style::PLAIN)
+            .render_lines(&Glyphs::ascii(), Style::PLAIN, Style::PLAIN, &[])
             .iter()
             .map(|l| l.iter().map(|s| s.text.as_str()).collect())
             .collect()
+    }
+
+    #[test]
+    fn a_tinted_cell_takes_its_colour_of_the_palette() {
+        let mut canvas = Canvas::new(5, 3);
+        canvas.draw_box(0, 0, 5, 3);
+        canvas.text(1, 1, "ab");
+        canvas.tint_lines(0, 0, 5, 3, 1);
+        let palette = [Style::PLAIN, Style::PLAIN.bold()];
+        let lines = canvas.render_lines(&Glyphs::ascii(), Style::PLAIN, Style::PLAIN, &palette);
+        // The outline takes the colour, the text inside keeps its own.
+        assert_eq!(lines[0][0].style, Style::PLAIN.bold());
+        let middle: Vec<_> = lines[1].iter().filter(|s| s.text.contains('a')).collect();
+        assert_eq!(middle[0].style, Style::PLAIN);
     }
 
     #[test]

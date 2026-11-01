@@ -54,15 +54,26 @@ table borders. A diagram that is not drawn is shown as a plain code block: anoth
 syntax outside the supported set, or a drawing wider than the line. A left-to-right flowchart too
 wide for the line is stacked top-down first.
 
+With colours, the outline of a node takes the colour of its role, from its shape: a step, an end, a
+decision or a store. The main path and the edge labels take colours of their own. Edges of one line
+style that reach the same node join into one last line, with one head. In a sequence diagram, the
+participants take the colour of a step and the notes the colour of a decision. A call takes the
+colour of the main path, a return a softer one, and the text of a message the colour of a label. The
+bars of a pie chart take the colours in turn.
+
 Flowcharts: nodes may be rectangles `[text]`, rounded `(text)`, `([text])`, `((text))` or diamonds
-`{text}`. `<br/>` in a label starts a new line. Edges may be `-->`, `---`, dotted `-.->`, `-.-` or
-thick `==>`, `===`, with a label as `-->|text|` or `-- text -->`. Styling lines (`style`,
-`classDef`, `class`, `linkStyle`, `click`) are ignored. Subgraphs and a node linked to itself are
-not drawn.
+`{text}`. The other shapes of a page, such as `{{text}}` or `[(text)]`, are drawn as rectangles.
+`<br/>` in a label starts a new line. Edges may be `-->`, `---`, dotted `-.->`, `-.-` or thick
+`==>`, `===`, longer or with a head at both ends, with a label as `-->|text|` or `-- text -->`.
+`A & B --> C` links each node on one side to each node on the other. Styling lines (`style`,
+`classDef`, `class`, `linkStyle`, `click`) are ignored. The nodes of a subgraph are drawn without
+its box. A node linked to itself and a link to a subgraph are not drawn.
 
 Sequence diagrams: `participant` and `actor` declarations, messages `->>`, `-->>`, `->`, `-->`,
-`-)`, `--)`, notes `left of`, `right of` and `over`, and `autonumber`. Blocks (`loop`, `alt`, `opt`,
-`par`, ...), a message to oneself and the cross arrows `-x` are not drawn.
+`-)`, `--)`, notes `left of`, `right of` and `over`, and `autonumber`. The bars of `activate` are
+left out. A diagram with a block (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`), a
+message to oneself, a cross arrow `-x` or a message with 2 heads is not drawn in the terminal. A
+page draws all of them.
 
 State diagrams: transitions `A --> B` with an optional `: label`, the pseudo-state `[*]` as start
 and end, `state "Name" as id`, `id : description` and `direction`. Composite states, forks, choices,

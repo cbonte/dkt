@@ -85,10 +85,57 @@ that span. A backtick under a bar, or under the end of a span, followed by a das
 line that turns right toward a label, and a row of `<--->` is a double arrow for each span of the
 text above it. The strokes and the text take the colour of the text of the page.
 
-A fenced block whose language is `mermaid` is drawn as an SVG figure too, with the layout that
-`dkt cat` draws in the terminal. It holds a flowchart, a sequence diagram, a state diagram, a class
-diagram or an entity-relationship diagram. A pie chart is drawn as a pie with a legend. A block that
-is not drawn stays a code block.
+A fenced block whose language is `mermaid` is drawn as an SVG figure too. It holds a flowchart, a
+sequence diagram, a state diagram, a class diagram or an entity-relationship diagram. A pie chart is
+drawn as a pie with a legend. A block that is not drawn stays a code block.
+
+The figure is a vector drawing made for the page:
+
+| Part     | How it is drawn                                                                         |
+| -------- | --------------------------------------------------------------------------------------- |
+| Layout   | nodes in ranks along the direction of the diagram, ordered to cross as few edges as can |
+| Nodes    | boxes sized by their text, in the shape that the source names                           |
+| Edges    | square lines that go around the nodes, with their heads and their line style            |
+| Labels   | text in a tinted pill on the edge, which stops on each side of it                       |
+| Text     | a sans-serif font, wrapped at `<br/>` and past a width                                  |
+| Size     | the natural size, scaled down to the width of the column and never scaled up            |
+| Colours  | a tint by the role of each part, over the colour of the text of the page                |
+| Fallback | the layout of `dkt cat` when the vector drawing cannot draw the diagram                 |
+
+A flowchart may hold subgraphs, nested or not. Each one is a titled box around its nodes, and an
+edge may cross its border. The shapes are the rectangle, the rounded box, the stadium, the circle,
+the double circle, the diamond, the hexagon, the subroutine, the cylinder, the flag, the
+parallelograms and the trapezoids. A link may be solid, dotted or thick, with an arrow, a circle or
+a cross at either end. A link `~~~` places its nodes and draws nothing.
+
+A diagram keeps the direction of its source. One wider than the column is laid out more compactly
+first: smaller gaps, smaller padding and narrower lines of text. What is still too wide is scaled
+down.
+
+A sequence diagram draws its participants and actors, the messages with their heads, the messages to
+oneself, the notes, the bars of `activate` and of `+` and `-`, and the blocks `loop`, `alt`, `opt`,
+`par`, `critical`, `break` and `rect` with their sections. A class diagram draws each class in
+compartments for its name, its fields and its methods. An entity-relationship diagram draws the
+attributes of an entity in columns, and the cardinalities as crow's feet.
+
+The figure holds the source in its description, and its labels are text that a search finds. The
+same source gives the same figure.
+
+The colours of a figure come from custom properties of the page. Each one has a fallback that reads
+on a light and on a dark ground, so a figure opened alone keeps its colours. A theme sets them to
+match its own:
+
+| Part                                      | Custom property           | Fallback |
+| ----------------------------------------- | ------------------------- | -------- |
+| step: any other node, participant         | `--dkt-diagram-step`      | blue     |
+| end: stadium, circle, start and end state | `--dkt-diagram-terminal`  | green    |
+| decision: diamond, hexagon, note          | `--dkt-diagram-decision`  | amber    |
+| store: cylinder, block of a sequence      | `--dkt-diagram-store`     | violet   |
+| subgraph, `rect` block                    | `--muted`                 | slate    |
+| main path, edge label, activation bar     | `--accent`                | orange   |
+
+A node is tinted by its shape, never by its text. The shapes and the labels carry the meaning, and
+the colours only repeat it. The text keeps the colour of the text of the page.
 
 A fenced block whose language is `ansi` holds text with the escape sequences of a terminal, such as
 the output of `dkt cat --color always`. It is drawn on the dark ground of a terminal, with the 16

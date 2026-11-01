@@ -20,13 +20,13 @@ fn entity_name(token: &str) -> Option<&str> {
     (!name.is_empty() && (token.len() != name.len() || name.chars().all(word))).then_some(name)
 }
 
-/// Cardinality written next to an entity, as `..` of the minimum and the maximum.
-fn cardinality(token: &str) -> Option<&'static str> {
+/// Cardinality written next to an entity.
+fn cardinality(token: &str) -> Option<Head> {
     match token {
-        "||" => Some("1"),
-        "|o" | "o|" => Some("0..1"),
-        "}o" | "o{" => Some("0..*"),
-        "}|" | "|{" => Some("1..*"),
+        "||" => Some(Head::One),
+        "|o" | "o|" => Some(Head::ZeroOne),
+        "}o" | "o{" => Some(Head::ZeroMany),
+        "}|" | "|{" => Some(Head::OneMany),
         _ => None,
     }
 }
@@ -54,22 +54,17 @@ impl Parser {
         };
         let (left, right) = (cardinality(&rel[..2])?, cardinality(&rel[4..])?);
         let (from, to) = (self.entity(a)?, self.entity(b)?);
-        let counts = format!("({left} to {right})");
         self.b.flow.edges.push(Edge {
             from,
             to,
-            from_end: Head::None,
-            to_end: Head::None,
+            from_end: left,
+            to_end: right,
             weight: if dotted {
                 Weight::Dotted
             } else {
                 Weight::Normal
             },
-            label: Some(if label.is_empty() {
-                counts
-            } else {
-                format!("{label} {counts}")
-            }),
+            label: (!label.is_empty()).then(|| label.to_string()),
         });
         Some(())
     }
@@ -164,9 +159,11 @@ mod tests {
         );
         assert_eq!(flow.nodes[0].dividers, [1]);
         assert_eq!(flow.nodes[2].lines, ["LINE-ITEM"]);
-        assert_eq!(flow.edges[0].label.as_deref(), Some("places (1 to 0..*)"));
+        assert_eq!(flow.edges[0].text().as_deref(), Some("places (1 to 0..*)"));
+        assert_eq!(flow.edges[0].from_end, Head::One);
+        assert_eq!(flow.edges[0].to_end, Head::ZeroMany);
         assert_eq!(flow.edges[1].weight, Weight::Dotted);
-        assert_eq!(flow.edges[1].label.as_deref(), Some("has (1..* to 1)"));
+        assert_eq!(flow.edges[1].text().as_deref(), Some("has (1..* to 1)"));
     }
 
     #[test]
