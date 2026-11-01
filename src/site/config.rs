@@ -25,6 +25,9 @@ pub struct Config {
     /// Directories whose files the pages point at, copied to the site.
     #[serde(default)]
     pub asset: Vec<Asset>,
+    /// Addresses of documents that this site serves from its own tree.
+    #[serde(default)]
+    pub mirror: Vec<Mirror>,
     /// Where the images of a `figure` annotation given by name are found.
     #[serde(default)]
     pub figures: Figures,
@@ -152,6 +155,18 @@ pub struct PageEntry {
 
 fn default_page_template() -> String {
     "page.html".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Mirror {
+    /// Start of the addresses that the documents write, such as `https://host/org/repo/blob/main/`.
+    pub url: String,
+    /// Directory in the tree of the documents that holds the files behind those addresses.
+    pub src: String,
+    /// Patterns of the files that stay at their address, written like the lines of a `.gitignore`
+    /// file and relative to `src`.
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

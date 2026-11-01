@@ -23,7 +23,7 @@ use crate::cmd::lint::rules;
 use crate::page::{self, Hooks, Page};
 use crate::parallel;
 use config::Config;
-use links::{LinkMap, Served, normalize};
+use links::{LinkMap, Mirrored, Served, normalize};
 
 /// File that marks a directory this module wrote, so that a build only clears its own output.
 const MARKER: &str = ".dkt-site";
@@ -735,7 +735,16 @@ pub fn build(opts: &Options) -> Result<Report> {
             exclude: a.exclude.clone(),
         })
         .collect();
-    let links = LinkMap::new(&root, served, assets);
+    let mirrors: Vec<Mirrored> = cfg
+        .mirror
+        .iter()
+        .map(|m| Mirrored {
+            url: m.url.clone(),
+            src: m.src.trim_matches('/').to_string(),
+            exclude: m.exclude.clone(),
+        })
+        .collect();
+    let links = LinkMap::new(&root, served, assets, mirrors);
     if opts.lint && !cfg.lint.disable.iter().any(|n| n == UNSERVED) {
         let mut found = Vec::new();
         for (entry, md) in entries.iter().zip(&kept_md) {
@@ -744,6 +753,22 @@ pub fn build(opts: &Options) -> Result<Report> {
                 if let Some(rel) = links.unserved(&entry.src, &target) {
                     found.push(format!(
                         "{}:{line}:{col}: {UNSERVED}: {rel} exists, and the site does not serve it",
+                        entry.src
+                    ));
+                }
+            }
+        }
+        for (entry, md) in entries.iter().zip(&kept_md) {
+            let path = root.join(&entry.src);
+            for (line, col, target) in rules::external_targets(&path, md) {
+                if let Some(rel) = links.unserved_mirror(&target) {
+                    let what = if links.exists(&rel) {
+                        "exists, and the site does not serve it"
+                    } else {
+                        "is not a file of the sources"
+                    };
+                    found.push(format!(
+                        "{}:{line}:{col}: {UNSERVED}: {rel} {what}",
                         entry.src
                     ));
                 }

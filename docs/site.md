@@ -57,6 +57,23 @@ refused by the check as `link-unserved`, since it would leave the site: publish 
 link as a full address. `[lint] disable = ["link-unserved"]` leaves such a link as written. A target
 that does not exist is left as written, and the check reports it.
 
+## Linking to a document of another site tree
+
+A document that another repository holds is linked by the address it has there, so that the link
+works on its own host too. `[[mirror]]` tells the site that the files behind such an address are in
+its own tree.
+
+```
+[[mirror]]
+url = "https://github.com/org/other/blob/main/"
+src = ".src/other"
+exclude = ["docs/STATUS.md"]
+```
+
+A link that starts with `url` is looked up under `src`, unless `exclude` names the file: the link stays as written and the check leaves it alone.
+ The check refuses it as `link-unserved` when
+the site serves no page or asset for that file, and the build writes the link to the page.
+
 The body of a page starts with its title and its first paragraph, as the document does on GitHub, so
 a template does not write them again.
 
@@ -94,6 +111,7 @@ It is a TOML file.
 | `[[section]]` | a group of pages with an index of its own: `name`, `url`, `title`, `description`, `template`, `sidebar`            |
 | `[[page]]`    | documents to serve: a `src` with its `url` and `title`, or a `glob` such as `docs/guides/*.md`, and their `format` |
 | `[[asset]]`   | a directory of files the pages point at: `src`, the `url` it is served at, and `exclude`, the patterns it leaves out |
+| `[[mirror]]`  | an address that the documents write for a file of another tree: `url`, and the `src` directory of the tree      |
 | `[figures]`   | where a figure given by name is found: `src` and `dark`, with `{name}` replaced                                    |
 | `[colors]`    | `light` and `dark`, tables of colours that replace those of the theme                                              |
 | `[lint]`      | `disable` and `enable`, lists of rules for the check that runs first                                               |

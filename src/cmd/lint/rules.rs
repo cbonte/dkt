@@ -162,6 +162,34 @@ pub fn local_targets(path: &Path, text: &str) -> Vec<(usize, usize, String)> {
     out
 }
 
+/// The addresses that the links and the images of a document point at, each with the line and the
+/// column where it is written.
+pub fn external_targets(path: &Path, text: &str) -> Vec<(usize, usize, String)> {
+    let src = Source::new(path, text);
+    let mut out = Vec::new();
+    for (event, range) in Parser::new_ext(text, parser_options()).into_offset_iter() {
+        let (Event::Start(Tag::Link {
+            dest_url,
+            link_type,
+            ..
+        })
+        | Event::Start(Tag::Image {
+            dest_url,
+            link_type,
+            ..
+        })) = &event
+        else {
+            continue;
+        };
+        if matches!(link_type, LinkType::Email) || !dest_url.contains("://") {
+            continue;
+        }
+        let (line, col) = src.at(range.start);
+        out.push((line, col, dest_url.to_string()));
+    }
+    out
+}
+
 /// Checks every link and image target that stays inside the file tree.
 fn check_targets(src: &Source<'_>, enabled: &HashSet<Rule>, out: &mut Vec<Finding>) {
     let dir = src.path.parent().unwrap_or(Path::new("."));

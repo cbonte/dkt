@@ -5,6 +5,7 @@
 - site: load the widgets and their style in the pages of any theme.
 - site: refuse a link to a file that the site does not serve, as link-unserved.
 - site: leave files out of an asset directory with patterns, at any depth.
+- site: serve a link to a document of another tree by its address, with [[mirror]].
 
 ## Changed
 

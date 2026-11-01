@@ -23,6 +23,15 @@ pub struct LinkMap {
     root: PathBuf,
     served: HashMap<String, String>,
     assets: Vec<Served>,
+    mirrors: Vec<Mirrored>,
+}
+
+/// An address that the documents write for a file of the tree: its start, and the directory that
+/// holds the files behind it.
+pub struct Mirrored {
+    pub url: String,
+    pub src: String,
+    pub exclude: Vec<String>,
 }
 
 /// An asset directory: where it is in the tree, where it is served and what it leaves out.
@@ -41,18 +50,58 @@ impl Served {
 }
 
 impl LinkMap {
-    pub fn new(root: &Path, served: HashMap<String, String>, assets: Vec<Served>) -> LinkMap {
+    pub fn new(
+        root: &Path,
+        served: HashMap<String, String>,
+        assets: Vec<Served>,
+        mirrors: Vec<Mirrored>,
+    ) -> LinkMap {
         LinkMap {
             root: root.to_path_buf(),
             served,
             assets,
+            mirrors,
         }
+    }
+
+    /// The path and the anchor of an address that starts like one of the mirrors.
+    fn mirrored(&self, target: &str) -> Option<(String, String)> {
+        let (rest, mirror) = self
+            .mirrors
+            .iter()
+            .find_map(|m| target.strip_prefix(&m.url).map(|rest| (rest, m)))?;
+        let (path, frag) = match rest.split_once('#') {
+            Some((p, f)) => (p, format!("#{f}")),
+            None => (rest, String::new()),
+        };
+        let path = path.split('?').next().unwrap_or(path);
+        if crate::site::exclude::is_excluded(&mirror.exclude, path) {
+            return None;
+        }
+        Some((normalize(&format!("{}/{path}", mirror.src))?, frag))
+    }
+
+    /// The path of an address of a mirror that the site does not serve, the file existing or not.
+    pub fn unserved_mirror(&self, target: &str) -> Option<String> {
+        let (rel, _) = self.mirrored(target)?;
+        if self.served.contains_key(&rel) || self.assets.iter().any(|a| a.serves(&rel).is_some()) {
+            return None;
+        }
+        Some(rel)
+    }
+
+    /// Whether `rel` is a file of the tree.
+    pub fn exists(&self, rel: &str) -> bool {
+        self.root.join(rel).exists()
     }
 
     /// The path of `target`, written in the document `from`, from the root of the documents, and
     /// its anchor. `None` for an address, an anchor in the same document and a path that climbs
     /// out of the root.
     fn locate(&self, from: &str, target: &str) -> Option<(String, String)> {
+        if let Some(found) = self.mirrored(target) {
+            return Some(found);
+        }
         if target.starts_with('#') || target.starts_with('/') || target.contains("://") {
             return None;
         }
@@ -115,6 +164,11 @@ mod tests {
                 url: "/s/img".to_string(),
                 exclude: Vec::new(),
             }],
+            vec![Mirrored {
+                url: "https://h.io/o/r/blob/main/".to_string(),
+                src: "r".to_string(),
+                exclude: vec!["docs/kept.md".to_string()],
+            }],
         )
     }
 
@@ -156,6 +210,38 @@ mod tests {
     }
 
     #[test]
+    fn an_address_of_a_mirror_becomes_the_page_it_names() {
+        let mut m = map();
+        m.served
+            .insert("r/docs/a.md".to_string(), "/s/r/a/".to_string());
+        assert_eq!(
+            m.resolve("docs/x.md", "https://h.io/o/r/blob/main/docs/a.md#top")
+                .as_deref(),
+            Some("/s/r/a/#top")
+        );
+        assert_eq!(
+            m.unserved_mirror("https://h.io/o/r/blob/main/docs/a.md#top"),
+            None
+        );
+        assert_eq!(
+            m.unserved_mirror("https://h.io/o/r/blob/main/docs/missing.md")
+                .as_deref(),
+            Some("r/docs/missing.md")
+        );
+        assert_eq!(
+            m.unserved_mirror("https://h.io/o/r/blob/main/docs/kept.md"),
+            None,
+            "a file that stays at its address is not checked"
+        );
+        assert_eq!(
+            m.resolve("docs/x.md", "https://h.io/o/r/blob/main/docs/kept.md"),
+            None
+        );
+        assert_eq!(m.unserved_mirror("https://other.io/a.md"), None);
+        assert_eq!(m.resolve("docs/x.md", "https://other.io/a.md"), None);
+    }
+
+    #[test]
     fn a_file_that_exists_and_is_not_served_is_unserved() {
         let dir = std::env::temp_dir().join(format!("dkt-links-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("src")).unwrap();
@@ -171,6 +257,7 @@ mod tests {
                 url: "/s/img".to_string(),
                 exclude: vec!["*.tmp".to_string()],
             }],
+            Vec::new(),
         );
         std::fs::create_dir_all(dir.join("img")).unwrap();
         std::fs::write(dir.join("img/a.tmp"), "").unwrap();
