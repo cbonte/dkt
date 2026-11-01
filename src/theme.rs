@@ -26,6 +26,8 @@ static DOCS: Builtin = Builtin {
         file!("docs", "templates/partials/brand.html"),
         file!("docs", "templates/partials/pager.html"),
         file!("docs", "templates/partials/side-top.html"),
+        file!("common", "templates/partials/versions.html"),
+        file!("common", "templates/partials/version-note.html"),
     ],
     statics: &[
         file!("docs", "static/docs.css"),
@@ -47,6 +49,8 @@ static PAPER: Builtin = Builtin {
         file!("paper", "templates/section.html"),
         file!("paper", "templates/partials/brand.html"),
         file!("paper", "templates/partials/pager.html"),
+        file!("common", "templates/partials/versions.html"),
+        file!("common", "templates/partials/version-note.html"),
     ],
     statics: &[
         file!("paper", "static/paper.css"),
@@ -68,6 +72,8 @@ static PLAIN: Builtin = Builtin {
         file!("plain", "templates/section.html"),
         file!("plain", "templates/partials/brand.html"),
         file!("plain", "templates/partials/pager.html"),
+        file!("common", "templates/partials/versions.html"),
+        file!("common", "templates/partials/version-note.html"),
     ],
     statics: &[
         file!("plain", "static/plain.css"),
@@ -97,6 +103,19 @@ pub const WIDGET_FILES: [(&str, &str); 4] = [
     (
         "widgets-extra.js",
         include_str!("../themes/common/static/widgets-extra.js"),
+    ),
+];
+
+/// The style and the script of the selector of versions, written only into a version of a
+/// documentation.
+pub const VERSION_FILES: [(&str, &str); 2] = [
+    (
+        "versions.css",
+        include_str!("../themes/common/static/versions.css"),
+    ),
+    (
+        "versions.js",
+        include_str!("../themes/common/static/versions.js"),
     ),
 ];
 
@@ -181,6 +200,8 @@ mod tests {
                 "section.html",
                 "partials/brand.html",
                 "partials/pager.html",
+                "partials/versions.html",
+                "partials/version-note.html",
             ] {
                 assert!(
                     theme.template(template).is_some(),

@@ -39,6 +39,33 @@ pub struct Config {
     /// Free data for the templates, read there as `data`.
     #[serde(default)]
     pub data: toml::Table,
+    /// The versions of the documentation, newest first, read by the refresh of the root.
+    #[serde(default)]
+    pub version: Vec<Version>,
+}
+
+/// A version of the documentation, as the site declares it.
+#[derive(Debug, Deserialize)]
+pub struct Version {
+    /// The directory of the version under the root, and the segment of its address.
+    pub name: String,
+    /// The label of the version in the selector, the name when omitted.
+    pub title: Option<String>,
+    #[serde(default)]
+    pub status: Status,
+}
+
+/// What a version is to its readers.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Status {
+    /// A released version. The first one declared is the latest.
+    #[default]
+    Release,
+    /// A version that is not released yet.
+    Dev,
+    /// A version that readers should leave.
+    Deprecated,
 }
 
 /// The colours of a site, by the name of the variable of the theme.

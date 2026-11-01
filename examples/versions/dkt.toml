@@ -1,0 +1,17 @@
+# The root of the versions of a sample documentation, as the default branch declares them.
+# Build each version, then refresh the root:
+#   dkt site examples/versions/1.0/dkt.toml -o public --docs-version 1.0
+#   dkt site examples/versions/2.0/dkt.toml -o public --docs-version 2.0
+#   dkt site examples/versions/dkt.toml -o public --only versions
+
+[site]
+title = "Sample"
+base_url = "https://example.com/sample"
+
+[[version]]
+name = "2.0"
+title = "2.0-dev"
+status = "dev"
+
+[[version]]
+name = "1.0"

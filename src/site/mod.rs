@@ -9,6 +9,7 @@ pub mod exclude;
 pub(crate) mod fromfile;
 mod links;
 mod snapshots;
+pub mod versions;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
@@ -42,7 +43,10 @@ pub struct Options {
     pub lint: bool,
     /// What to build when it is not the whole site: `home`, `static`, `section:NAME` or
     /// `page:SRC`. The rest of the output directory is left as it is.
+    /// `versions` refreshes the root of a set of versions instead.
     pub only: Vec<String>,
+    /// The version of the documentation that the build writes into `out/NAME`.
+    pub docs_version: Option<String>,
 }
 
 /// The part of a site that a build is asked for.
@@ -52,6 +56,8 @@ struct Scope {
     statics: bool,
     sections: HashSet<String>,
     pages: HashSet<String>,
+    /// The root of a set of versions, which goes with nothing else.
+    versions: bool,
 }
 
 impl Scope {
@@ -62,11 +68,13 @@ impl Scope {
             statics: false,
             sections: HashSet::new(),
             pages: HashSet::new(),
+            versions: false,
         };
         for what in only {
             match what.split_once(':') {
                 None if what == "home" => scope.home = true,
                 None if what == "static" => scope.statics = true,
+                None if what == "versions" => scope.versions = true,
                 Some(("section", name)) if !name.is_empty() => {
                     scope.sections.insert(name.to_string());
                 }
@@ -74,9 +82,16 @@ impl Scope {
                     scope.pages.insert(src.to_string());
                 }
                 _ => {
-                    bail!("cannot build '{what}', expected home, static, section:NAME or page:SRC")
+                    bail!(
+                        "cannot build '{what}', expected home, static, versions, section:NAME or page:SRC"
+                    )
                 }
             }
+        }
+        if scope.versions && only.len() > 1 {
+            bail!(
+                "--only versions refreshes the root of the versions, and goes with no other part"
+            );
         }
         Ok(scope)
     }
@@ -110,6 +125,10 @@ impl Scope {
 /// What a build wrote.
 pub struct Report {
     pub pages: usize,
+    /// The directory the pages went to.
+    pub dir: PathBuf,
+    /// The number of versions listed, for a refresh of the root.
+    pub versions: Option<usize>,
 }
 
 use crate::format::Format;
@@ -428,6 +447,9 @@ struct SiteView<'a> {
     previews: bool,
     nav: Vec<NavView>,
     sections: BTreeMap<String, SectionView>,
+    /// The version being built, absent from a site without versions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<versions::VersionView>,
 }
 
 #[derive(Serialize)]
@@ -676,6 +698,16 @@ fn meta(entry: &Entry, page: &Page) -> Meta {
     }
 }
 
+/// The anchors of the headings of a page, each once, in the order of the page.
+fn ids(headings: &[crate::page::Heading]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    headings
+        .iter()
+        .filter(|h| !h.id.is_empty() && seen.insert(h.id.as_str()))
+        .map(|h| h.id.clone())
+        .collect()
+}
+
 fn headings(page: &Page) -> Vec<HeadingView> {
     page.headings
         .iter()
@@ -724,10 +756,32 @@ pub fn build(opts: &Options) -> Result<Report> {
         .base_url
         .clone()
         .unwrap_or_else(|| cfg.site.base_url.clone());
+    let scope = Scope::parse(&opts.only)?;
+    if scope.versions {
+        if opts.docs_version.is_some() {
+            bail!(
+                "--docs-version builds a version and --only versions refreshes the root: run one, then the other"
+            );
+        }
+        let count = versions::refresh(&cfg, &opts.out, &base_url)?;
+        return Ok(Report {
+            pages: 0,
+            dir: opts.out.clone(),
+            versions: Some(count),
+        });
+    }
+    // A version is built whole into its directory under the output directory, with its own base.
+    let mut version = match &opts.docs_version {
+        Some(name) if scope.partial() => {
+            bail!("--only does not go with --docs-version '{name}': a version is built whole")
+        }
+        Some(name) => Some(versions::Build::prepare(&opts.out, name, &base_url)?),
+        None => None,
+    };
+    let base_url = version.as_ref().map_or(base_url, |v| v.base_url());
     let base = base_path(&base_url);
 
     let mut entries = entries(&cfg, &root, &base)?;
-    let scope = Scope::parse(&opts.only)?;
     for name in &scope.sections {
         if !cfg.section.iter().any(|s| &s.name == name) {
             bail!("the site has no section '{name}'");
@@ -941,6 +995,7 @@ pub fn build(opts: &Options) -> Result<Report> {
             })
             .collect(),
         sections,
+        version: version.as_ref().map(|v| v.view()),
     };
     let site_value = Value::from_serialize(&site);
     let data_value = Value::from_serialize(&cfg.data);
@@ -968,21 +1023,38 @@ pub fn build(opts: &Options) -> Result<Report> {
             })
             .collect()
     };
-    let render =
-        |template: &str, page: Value, section: Value, nav: Vec<NavMark>| -> Result<String> {
-            env.get_template(template)
-                .with_context(|| format!("cannot load the template {template}"))?
-                .render(context! {
-                    site => site_value.clone(),
-                    data => data_value.clone(),
-                    page => page,
-                    section => section,
-                    nav => Value::from_serialize(nav),
-                })
-                .with_context(|| format!("cannot render the template {template}"))
-        };
+    let render = |template: &str,
+                  page: Value,
+                  section: Value,
+                  nav: Vec<NavMark>,
+                  versions: Value|
+     -> Result<String> {
+        env.get_template(template)
+            .with_context(|| format!("cannot load the template {template}"))?
+            .render(context! {
+                site => site_value.clone(),
+                data => data_value.clone(),
+                page => page,
+                section => section,
+                nav => Value::from_serialize(nav),
+                versions => versions,
+            })
+            .with_context(|| format!("cannot render the template {template}"))
+    };
 
-    if scope.partial() {
+    // A version goes to a sibling of its directory until the build ends.
+    let out: PathBuf = match &version {
+        Some(v) => v.out().to_path_buf(),
+        None => opts.out.clone(),
+    };
+    if let Some(v) = version.as_mut() {
+        v.start()?;
+    } else if opts.out.join(versions::LIST).is_file() && !opts.out.join(MARKER).exists() {
+        bail!(
+            "{} holds the versions of a documentation: build a version with --docs-version NAME, or refresh the root with --only versions",
+            opts.out.display()
+        );
+    } else if scope.partial() {
         // The rest of the site is already there, so nothing is cleared.
         fs::create_dir_all(&opts.out)?;
         let marker = opts.out.join(MARKER);
@@ -992,6 +1064,29 @@ pub fn build(opts: &Options) -> Result<Report> {
     } else {
         prepare_out(&opts.out)?;
     }
+    let version = version;
+    // The path of a page inside the version, such as `guide/x/`.
+    let inside = |url: &str| -> String {
+        url.strip_prefix(base.as_str())
+            .unwrap_or(url)
+            .trim_start_matches('/')
+            .to_string()
+    };
+    // The versions a page lists, none in a site without versions.
+    let versions_of = |url: &str| -> Value {
+        match &version {
+            Some(v) => Value::from_serialize(v.links(&inside(url))),
+            None => Value::from_serialize(Vec::<String>::new()),
+        }
+    };
+    // The page with the meta, the style and the script of the versions, in a version only.
+    let with_versions = |html: String| -> String {
+        match &version {
+            Some(v) => versions::with_versions(&html, &base, &v.root_path, v.name()),
+            None => html,
+        }
+    };
+    let mut anchors: BTreeMap<String, Vec<String>> = BTreeMap::new();
     // The second pass renders with the links of the site, and writes each page as soon as it is set.
     let jobs: Vec<(&Entry, &PageLink, &String)> = entries
         .iter()
@@ -1020,8 +1115,14 @@ pub fn build(opts: &Options) -> Result<Report> {
             weight => link.weight,
         };
         let nav = nav_for(&entry.url, entry.section.as_deref());
-        let html = render(&entry.template, view, Value::UNDEFINED, nav)?;
-        write_page(&opts.out, &base, &entry.url, &html)?;
+        let html = render(
+            &entry.template,
+            view,
+            Value::UNDEFINED,
+            nav,
+            versions_of(&entry.url),
+        )?;
+        write_page(&out, &base, &entry.url, &with_versions(html))?;
         Ok(Searchable {
             headings: page.headings,
             aliases: page.aliases,
@@ -1038,8 +1139,15 @@ pub fn build(opts: &Options) -> Result<Report> {
         let page =
             context! { title => &view.title, description => &view.description, url => &view.url };
         let nav = nav_for(&view.url, Some(&s.name));
-        let html = render(&s.template, page, Value::from_serialize(view), nav)?;
-        write_page(&opts.out, &base, &view.url, &html)?;
+        let html = render(
+            &s.template,
+            page,
+            Value::from_serialize(view),
+            nav,
+            versions_of(&view.url),
+        )?;
+        write_page(&out, &base, &view.url, &with_versions(html))?;
+        anchors.insert(inside(&view.url), Vec::new());
         written += 1;
     }
     if let Some(home) = cfg.home.as_ref().filter(|_| scope.builds_home()) {
@@ -1066,32 +1174,48 @@ pub fn build(opts: &Options) -> Result<Report> {
             url => format!("{base}/"),
         };
         let nav = nav_for(&format!("{base}/"), None);
-        let html = render(&home.template, page, Value::UNDEFINED, nav)?;
-        write_page(&opts.out, &base, &format!("{base}/"), &html)?;
+        let html = render(
+            &home.template,
+            page,
+            Value::UNDEFINED,
+            nav,
+            versions_of(&home_url),
+        )?;
+        write_page(&out, &base, &home_url, &with_versions(html))?;
+        anchors.insert(
+            inside(&home_url),
+            doc.as_ref().map(|d| ids(&d.headings)).unwrap_or_default(),
+        );
         written += 1;
     }
     if scope.builds_statics() {
         // Every theme gets the widgets, and its own files and the site's replace them.
         for (path, text) in crate::theme::WIDGET_FILES {
-            write_file(&opts.out.join(path), text)?;
+            write_file(&out.join(path), text)?;
+        }
+        // A version also gets the files of its selector, which a theme or the site can replace.
+        if version.is_some() {
+            for (path, text) in crate::theme::VERSION_FILES {
+                write_file(&out.join(path), text)?;
+            }
         }
         if let Some(builtin) = builtin {
             for (path, text) in builtin.static_files() {
-                write_file(&opts.out.join(path), text)?;
+                write_file(&out.join(path), text)?;
             }
         }
         if let Some(dir) = &theme_dir {
             let shared = dir.join("static");
             if shared.is_dir() {
-                copy_dir(&shared, &opts.out)?;
+                copy_dir(&shared, &out)?;
             }
         }
         if let Some(dir) = &cfg.site.static_dir {
-            copy_dir(&root.join(dir), &opts.out)?;
+            copy_dir(&root.join(dir), &out)?;
         }
         for asset in &cfg.asset {
             let to = asset.url.trim_matches('/');
-            copy_dir_excluding(&root.join(&asset.src), &opts.out.join(to), &asset.exclude)?;
+            copy_dir_excluding(&root.join(&asset.src), &out.join(to), &asset.exclude)?;
         }
     }
     // The addresses of the pages of the site in the order of the properties, which a partial build
@@ -1123,7 +1247,7 @@ pub fn build(opts: &Options) -> Result<Report> {
                     aliases: &page.aliases,
                 }),
         );
-        let to = opts.out.join(crate::search::FILE);
+        let to = out.join(crate::search::FILE);
         let json = match fs::read_to_string(&to) {
             // A partial build keeps what the index says of the pages it did not build.
             Ok(existing) if scope.partial() => {
@@ -1135,11 +1259,27 @@ pub fn build(opts: &Options) -> Result<Report> {
         fs::write(&to, json).with_context(|| format!("cannot write {}", to.display()))?;
     }
     if scope.partial() {
-        write_widgets(&opts.out, &links_of_pages, &pages, Some(&order))?;
+        write_widgets(&out, &links_of_pages, &pages, Some(&order))?;
     } else {
-        write_widgets(&opts.out, &links_of_pages, &pages, None)?;
+        write_widgets(&out, &links_of_pages, &pages, None)?;
     }
-    Ok(Report { pages: written })
+    let Some(version) = version else {
+        return Ok(Report {
+            pages: written,
+            dir: opts.out.clone(),
+            versions: None,
+        });
+    };
+    for (link, page) in links_of_pages.iter().zip(&pages) {
+        anchors.insert(inside(&link.url), ids(&page.headings));
+    }
+    let dir = version.dir().to_path_buf();
+    version.finish(anchors)?;
+    Ok(Report {
+        pages: written,
+        dir,
+        versions: None,
+    })
 }
 
 #[cfg(test)]

@@ -14,12 +14,12 @@
 <body>
 <header>
 <a class="brand" href="{{ site.base_path }}/">{% include "partials/brand.html" %}</a>
-<nav>{% for n in nav %}<a href="{{ n.url }}"{% if n.current %} aria-current="page"{% endif %}>{{ n.name }}</a>{% endfor %}</nav>
+<nav>{% for n in nav %}<a href="{{ n.url }}"{% if n.current %} aria-current="page"{% endif %}>{{ n.name }}</a>{% endfor %}</nav>{% if site.version %}{% include "partials/versions.html" %}{% endif %}
 {% if data.repo %}<a href="{{ data.repo }}">Source</a>{% endif %}
 {% if site.search %}<button type="button" class="search-open" aria-label="Search the titles" hidden>Search</button>{% endif %}
 </header>
 <main>
-{% block main %}{% endblock %}
+{% if site.version %}{% include "partials/version-note.html" %}{% endif %}{% block main %}{% endblock %}
 </main>
 {% if site.search %}<dialog class="search" data-base="{{ site.base_path }}" aria-label="Search">
 <input type="search" placeholder="Search the titles" autocomplete="off" aria-label="Search" role="combobox" aria-controls="search-results" aria-expanded="true">

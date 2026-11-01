@@ -41,6 +41,7 @@ A site made by `dkt site` is more than text:
 | Mermaid diagrams, drawn as SVG                                                                          | a `mermaid` block, as on GitHub                           |
 | the colours of a terminal                                                                               | an `ansi` block                                           |
 | a search palette, cards for the links and pagers                                                        | the [properties file](docs/site.md)                       |
+| several versions of a documentation, with a selector in every page                                      | [versions](docs/versions.md)                              |
 | examples of each                                                                                        | [the site of dkt](https://cbonte.github.io/dkt/examples/) |
 
 The documents stay readable on GitHub and in the terminal, because the widgets are comments.

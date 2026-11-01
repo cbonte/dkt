@@ -17,6 +17,13 @@
 - html: tint the parts of a diagram by role, with custom properties a theme may set.
 - cat: colour the nodes of a diagram by role, its main path and its edge labels.
 - cat: colour the parts of a sequence diagram and the bars of a pie chart.
+- site: build a version of the documentation beside the others.
+- site: list the versions declared with [[version]] and lead the root to the latest.
+- site: choose a version from a selector that keeps the page being read.
+- site: serve the latest version under a stable address.
+- site: remove the files that a new build of a version no longer writes.
+- site: warn when a version was built by another dkt.
+- site: keep the anchor of the page when the chosen version has it.
 
 ## Changed
 

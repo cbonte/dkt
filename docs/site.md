@@ -8,6 +8,7 @@ dkt site docs/dkt.toml -o out            # another file, another directory
 dkt site --base-url http://localhost:8000/preview
 dkt site --no-lint                        # skip the check that runs first
 dkt site --only section:3.4 --only home   # build a part of the site
+dkt site --docs-version 1.1               # build a version of the documentation into public/1.1
 ```
 
 The paths of the properties file are read from the directory that holds it. The output directory,
@@ -29,6 +30,7 @@ given several times.
 | `section:NAME` | the pages of a section and the index of the section   |
 | `page:SRC`     | one page, by the `src` of its properties              |
 | `static`       | the files of the theme, of the site and of the assets |
+| `versions`     | the root of the [versions of a documentation](versions.md), and nothing else |
 
 The documents out of the scope are not read, so a build can run where only the documents that
 changed are present. The check runs over the documents that are built, and a link to a page that is
@@ -139,6 +141,7 @@ It is a TOML file.
 | `[colors]`    | `light` and `dark`, tables of colours that replace those of the theme                                              |
 | `[lint]`      | `disable` and `enable`, lists of rules for the check that runs first                                               |
 | `[data]`      | anything, read by the templates as `data`                                                                          |
+| `[[version]]` | a version of the documentation: `name`, `title` and `status`, read by `--only versions`                            |
 
 For a `glob`, `section` puts the pages in a section and in its address, and `order` lists the file
 stems that come first. The pages of a `src` come in the order they are written. A `page` annotation
@@ -330,6 +333,8 @@ A template is a Jinja file in the `templates` directory. It can extend and inclu
 
 Each entry of `pages` has `title`, `nav_title`, `description`, `url`, `weight` and `section`. The
 content is HTML already, so it is not escaped. Everything else is, except the slash.
+
+A version of a documentation also gives `site.version` and `versions`, which [Versions of a documentation](versions.md#templates) describes.
 
 ## The check
 

@@ -1,0 +1,22 @@
+[site]
+title = "Sample"
+description = "The documentation of version 1.0."
+base_url = "https://example.com/sample"
+
+[home]
+template = "index.html"
+
+[[nav]]
+name = "Guide"
+url = "/guide/"
+section = "guide"
+
+[[section]]
+name = "guide"
+title = "Guide"
+sidebar = true
+
+[[page]]
+glob = "guide/*.md"
+section = "guide"
+order = ["install", "configure", "upgrade"]

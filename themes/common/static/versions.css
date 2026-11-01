@@ -1,0 +1,21 @@
+/* The selector of versions and the notes of a version of a documentation. */
+/* The colours come from the variables of the theme, and from the system colours without them. */
+.dkt-versions { position: relative; font: 500 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.dkt-versions summary { display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; color: var(--muted, inherit); border: 1px solid var(--line, GrayText); border-radius: 8px; cursor: pointer; list-style: none; white-space: nowrap; }
+.dkt-versions summary::-webkit-details-marker { display: none; }
+.dkt-versions summary::after { content: ""; width: 6px; height: 6px; margin: -3px 2px 0; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.dkt-versions[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.dkt-versions summary b { color: var(--fg, inherit); }
+.dkt-versions ul { position: absolute; z-index: 20; right: 0; top: calc(100% + 4px); min-width: 12em; max-height: 70vh; overflow-y: auto; margin: 0; padding: 4px; list-style: none; color: var(--fg, CanvasText); background: var(--bg, Canvas); border: 1px solid var(--line, GrayText); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.15); }
+.dkt-versions li { margin: 0; }
+.dkt-versions li a { display: block; padding: 6px 10px; color: inherit; border-radius: 6px; text-decoration: none; white-space: nowrap; }
+.dkt-versions li a:hover, .dkt-versions li a:focus-visible { background: var(--surface2, color-mix(in srgb, CanvasText 10%, Canvas)); }
+.dkt-versions li a[aria-current="true"] { font-weight: 700; }
+.dkt-version-note, .dkt-version-moved { box-sizing: border-box; max-width: 720px; margin: 16px auto; padding: 10px 14px; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg, CanvasText); background: var(--accent-bg, color-mix(in srgb, CanvasText 6%, Canvas)); border: 1px solid var(--line, GrayText); border-left: 4px solid var(--accent, LinkText); border-radius: 6px; }
+.top + .dkt-version-note, .top + .dkt-version-note + .dkt-version-moved, .top + .dkt-version-moved { max-width: min(1232px, calc(100% - 32px)); }
+.rule + .dkt-version-note, .rule + .dkt-version-note + .dkt-version-moved, .rule + .dkt-version-moved { max-width: min(672px, calc(100% - 48px)); }
+.dkt-version-note[hidden], .dkt-version-moved[hidden] { display: none; }
+.dkt-version-moved { display: flex; gap: 12px; align-items: baseline; }
+.dkt-version-moved span { flex: 1; }
+.dkt-version-moved button { padding: 2px 10px; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line, GrayText); border-radius: 6px; cursor: pointer; }
+@media (max-width: 600px) { .dkt-versions ul { right: auto; left: 0; } }
